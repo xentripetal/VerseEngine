@@ -1,0 +1,350 @@
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Verse.MoonWorks.lib.FAudio.csharp;
+
+namespace Verse.MoonWorks.Audio;
+
+/// <summary>
+///     AudioDevice manages all audio-related concerns.
+/// </summary>
+public class AudioDevice : IDisposable
+{
+
+	private const int Step = 200;
+
+	private readonly AudioTweenManager AudioTweenManager;
+
+	private readonly HashSet<GCHandle> resourceHandles = new HashSet<GCHandle>();
+	internal readonly object StateLock = new object();
+	private readonly HashSet<StreamingAudioSource> streamingAudioSources = new HashSet<StreamingAudioSource>();
+	private readonly Thread Thread;
+	private readonly Stopwatch ThreadTimer = new Stopwatch();
+	private readonly Stopwatch TimeElapsedStopwatch = new Stopwatch();
+	private readonly HashSet<TransientVoice> transientVoices = new HashSet<TransientVoice>();
+
+	private readonly IntPtr trueMasteringVoice;
+	private readonly TimeSpan UpdateInterval;
+
+	private readonly SourceVoicePool VoicePool;
+	private readonly List<SourceVoice> VoicesToReturn = new List<SourceVoice>();
+	private readonly AutoResetEvent WakeSignal;
+
+	public float CurveDistanceScalar = 1f;
+	public float DopplerScale = 1f;
+
+	// this is a fun little trick where we use a submix voice as a "faux" mastering voice
+	// this lets us maintain API consistency for effects like panning and reverb
+	private long previousTickTime;
+
+	private bool Running;
+	public float SpeedOfSound = 343.5f;
+
+	internal AudioDevice()
+	{
+		UpdateInterval = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / Step);
+
+		FAudio.FAudioCreate(out var handle, 0, FAudio.FAUDIO_DEFAULT_PROCESSOR);
+		Handle = handle;
+
+		/* Find a suitable device */
+
+		FAudio.FAudio_GetDeviceCount(Handle, out var devices);
+
+		if (devices == 0) {
+			Logger.LogError("No audio devices found!");
+			FAudio.FAudio_Release(Handle);
+			Handle = IntPtr.Zero;
+			return;
+		}
+
+		FAudio.FAudioDeviceDetails deviceDetails;
+
+		uint i = 0;
+		for (i = 0; i < devices; i++) {
+			FAudio.FAudio_GetDeviceDetails(
+				Handle,
+				i,
+				out deviceDetails
+			);
+			if ((deviceDetails.Role & FAudio.FAudioDeviceRole.FAudioDefaultGameDevice) == FAudio.FAudioDeviceRole.FAudioDefaultGameDevice) {
+				DeviceDetails = deviceDetails;
+				break;
+			}
+		}
+
+		if (i == devices) {
+			i = 0; /* whatever we'll just use the first one I guess */
+			FAudio.FAudio_GetDeviceDetails(
+				Handle,
+				i,
+				out deviceDetails
+			);
+			DeviceDetails = deviceDetails;
+		}
+
+		/* Init Mastering Voice */
+		var result = FAudio.FAudio_CreateMasteringVoice(
+			Handle,
+			out trueMasteringVoice,
+			FAudio.FAUDIO_DEFAULT_CHANNELS,
+			FAudio.FAUDIO_DEFAULT_SAMPLERATE,
+			0,
+			i,
+			IntPtr.Zero
+		);
+
+		if (result != 0) {
+			Logger.LogError("Failed to create a mastering voice!");
+			Logger.LogError("Audio device creation failed!");
+			return;
+		}
+
+		MasteringVoice = SubmixVoice.CreateFauxMasteringVoice(this);
+
+		/* Init 3D Audio */
+
+		Handle3D = new byte[FAudio.F3DAUDIO_HANDLE_BYTESIZE];
+		FAudio.F3DAudioInitialize(
+			DeviceDetails.OutputFormat.dwChannelMask,
+			SpeedOfSound,
+			Handle3D
+		);
+
+		AudioTweenManager = new AudioTweenManager();
+		VoicePool = new SourceVoicePool(this);
+
+		WakeSignal = new AutoResetEvent(true);
+
+		Thread = new Thread(ThreadMain);
+		Thread.IsBackground = true;
+		Thread.Start();
+
+		Running = true;
+
+		TimeElapsedStopwatch.Start();
+		previousTickTime = 0;
+	}
+	public IntPtr Handle { get; }
+	public byte[] Handle3D { get; }
+	public FAudio.FAudioDeviceDetails DeviceDetails { get; }
+	public SubmixVoice MasteringVoice { get; }
+	public bool IsDisposed { get; private set; }
+
+	public void Dispose()
+	{
+		// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+		Dispose(disposing: true);
+		GC.SuppressFinalize(this);
+	}
+
+	private void ThreadMain()
+	{
+		while (Running) {
+			ThreadTimer.Restart();
+
+			lock (StateLock) {
+				try {
+					ThreadMainTick();
+				}
+				catch (Exception e) {
+					Logger.LogError(e.ToString());
+				}
+			}
+
+			ThreadTimer.Stop();
+
+			if (ThreadTimer.Elapsed < UpdateInterval) {
+				WakeSignal.WaitOne(UpdateInterval - ThreadTimer.Elapsed);
+			}
+		}
+	}
+
+	private void ThreadMainTick()
+	{
+		var tickDelta = TimeElapsedStopwatch.Elapsed.Ticks - previousTickTime;
+		previousTickTime = TimeElapsedStopwatch.Elapsed.Ticks;
+		var elapsedSeconds = (float)tickDelta / TimeSpan.TicksPerSecond;
+
+		AudioTweenManager.Update(elapsedSeconds);
+
+		lock (streamingAudioSources) {
+			foreach (var voice in streamingAudioSources) {
+				voice.Update();
+			}
+		}
+
+		foreach (var voice in transientVoices) {
+			if (voice.State == SoundState.Playing && voice.BuffersQueued == 0) {
+				VoicesToReturn.Add(voice);
+				transientVoices.Remove(voice);
+			}
+		}
+
+		foreach (var voice in VoicesToReturn) {
+			voice.Reset();
+			VoicePool.Return(voice);
+		}
+
+		VoicesToReturn.Clear();
+	}
+
+	/// <summary>
+	///     Triggers all pending operations with the given syncGroup value.
+	/// </summary>
+	public void TriggerSyncGroup(uint syncGroup)
+	{
+		FAudio.FAudio_CommitChanges(Handle, syncGroup);
+	}
+
+	/// <summary>
+	///     Obtains an appropriate source voice from the voice pool.
+	/// </summary>
+	/// <param name="format">The format that the voice must match.</param>
+	/// <returns>A source voice with the given format.</returns>
+	public T Obtain<T>(Format format) where T : SourceVoice, IPoolable<T>
+	{
+		lock (StateLock) {
+			var voice = VoicePool.Obtain<T>(format);
+
+			if (voice is TransientVoice transientVoice) {
+				transientVoices.Add(transientVoice);
+			}
+
+			return voice;
+		}
+	}
+
+	/// <summary>
+	///     Returns the source voice to the voice pool.
+	/// </summary>
+	/// <param name="voice"></param>
+	internal void Return(SourceVoice voice)
+	{
+		lock (StateLock) {
+			VoicesToReturn.Add(voice);
+		}
+	}
+
+	internal void RegisterStreamingAudioSource(StreamingAudioSource source)
+	{
+		lock (streamingAudioSources) {
+			streamingAudioSources.Add(source);
+		}
+	}
+
+	internal void UnregisterStreamingAudioSource(StreamingAudioSource source)
+	{
+		lock (streamingAudioSources) {
+			streamingAudioSources.Remove(source);
+		}
+	}
+
+	internal void CreateTween(
+		Voice voice,
+		AudioTweenProperty property,
+		Func<float, float> easingFunction,
+		float start,
+		float end,
+		float duration,
+		float delayTime
+	)
+	{
+		lock (StateLock) {
+			AudioTweenManager.CreateTween(
+				voice,
+				property,
+				easingFunction,
+				start,
+				end,
+				duration,
+				delayTime
+			);
+		}
+	}
+
+	internal void ClearTweens(
+		Voice voice,
+		AudioTweenProperty property
+	)
+	{
+		lock (StateLock) {
+			AudioTweenManager.ClearTweens(voice, property);
+		}
+	}
+
+	internal void WakeThread()
+	{
+		WakeSignal.Set();
+	}
+
+	internal void AddResourceReference(GCHandle resourceReference)
+	{
+		lock (StateLock) {
+			resourceHandles.Add(resourceReference);
+		}
+	}
+
+	internal void RemoveResourceReference(GCHandle resourceReference)
+	{
+		lock (StateLock) {
+			resourceHandles.Remove(resourceReference);
+		}
+	}
+
+	protected virtual void Dispose(bool disposing)
+	{
+		if (!IsDisposed) {
+			Running = false;
+
+			if (disposing) {
+				Thread.Join();
+
+				// dispose audio sources first
+				foreach (var handle in resourceHandles) {
+					if (handle.Target is StreamingAudioSource streaming) {
+						streaming.Dispose();
+					}
+				}
+
+				// then dispose source voices
+				foreach (var handle in resourceHandles) {
+					if (handle.Target is SourceVoice voice) {
+						voice.Dispose();
+					}
+				}
+
+				// dispose all submix voices except the faux mastering voice
+				foreach (var handle in resourceHandles) {
+					if (handle.Target is SubmixVoice voice && voice != MasteringVoice) {
+						voice.Dispose();
+					}
+				}
+
+				// dispose the faux mastering voice
+				MasteringVoice.Dispose();
+
+				// dispose the true mastering voice
+				FAudio.FAudioVoice_DestroyVoice(trueMasteringVoice);
+
+				// destroy all other audio resources
+				foreach (var handle in resourceHandles) {
+					if (handle.Target is AudioResource resource) {
+						resource.Dispose();
+					}
+				}
+
+				resourceHandles.Clear();
+			}
+
+			FAudio.FAudio_Release(Handle);
+
+			IsDisposed = true;
+		}
+	}
+
+	~AudioDevice()
+	{
+		// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+		Dispose(disposing: false);
+	}
+}

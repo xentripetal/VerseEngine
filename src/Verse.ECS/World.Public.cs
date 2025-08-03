@@ -1,0 +1,466 @@
+namespace Verse.ECS;
+
+/// <summary>
+///     The entities container.
+/// </summary>
+public sealed partial class World
+{
+	/// <summary>
+	///     Create the world.
+	///     <para />
+	///     Optionally specify the number of components the world will handle.
+	///     <para />
+	/// </summary>
+	/// <param name="maxComponentId"></param>
+	public World(ulong maxComponentId = 256)
+	{
+		_comparer = new ComponentComparer(this);
+		Root = new Archetype(
+			this,
+			[],
+			_comparer
+		);
+		_typeIndex.Add(Root.Id, Root);
+		LastArchetypeId = Root.Id;
+
+		_maxCmpId = maxComponentId;
+		_entities.MaxID = maxComponentId;
+
+		RelationshipEntityMapper = new RelationshipEntityMapper(this);
+		NamingEntityMapper = new NamingEntityMapper(this);
+
+		OnPluginInitialization?.Invoke(this);
+	}
+
+
+
+	/// <summary>
+	///     Count of entities alive.<br />
+	///     ⚠️ If the count doesn't match with your expectations it's because
+	///     in TinyEcs components are also entities!
+	/// </summary>
+	public int EntityCount => _entities.Length;
+
+
+
+	/// <summary>
+	///     Cleanup the world.
+	/// </summary>
+	public void Dispose()
+	{
+		_entities.Clear();
+		Root.Clear();
+		_typeIndex.Clear();
+		_cachedComponents.Clear();
+		RelationshipEntityMapper.Clear();
+		NamingEntityMapper.Clear();
+
+	}
+
+
+
+	public event Action<World, EcsID>? OnEntityCreated, OnEntityDeleted;
+	public event Action<World, EcsID, ComponentInfo>? OnComponentSet, OnComponentUnset;
+	public static event Action<World>? OnPluginInitialization;
+
+	/// <summary>
+	///     Remove all empty archetypes.
+	/// </summary>
+	/// <returns></returns>
+	public int RemoveEmptyArchetypes()
+	{
+		var removed = 0;
+		Root?.RemoveEmptyArchetypes(ref removed, _typeIndex);
+		if (removed > 0)
+			LastArchetypeId = ulong.MaxValue;
+		return removed;
+	}
+
+	/// <summary>
+	///     Get or create an archetype with the specified components.
+	/// </summary>
+	/// <param name="ids"></param>
+	/// <returns></returns>
+	public Archetype Archetype(params Span<ComponentInfo> ids)
+	{
+		if (ids.IsEmpty)
+			return Root;
+
+		ids.SortNoAlloc(_comparisonCmps);
+
+		var hash = 0ul;
+		foreach (ref readonly var cmp in ids) {
+			hash = UnorderedSetHasher.Combine(hash, cmp.ID);
+		}
+		if (!_typeIndex.TryGetValue(hash, out var archetype)) {
+			var archLessOne = Archetype(ids[..^1]);
+			var arr = new ComponentInfo[ids.Length];
+			archLessOne.All.CopyTo(arr, 0);
+			arr[^1] = ids[^1];
+			arr.AsSpan().SortNoAlloc(_comparisonCmps);
+			archetype = NewArchetype(archLessOne, arr, arr[^1].ID);
+		}
+
+		return archetype;
+	}
+
+	/// <summary>
+	///     Create an entity with the specified components attached.
+	/// </summary>
+	/// <param name="arch"></param>
+	/// <returns></returns>
+	public EntityView Entity(Archetype arch)
+	{
+		ref var record = ref NewId(out var id);
+		record.Archetype = arch;
+		record.Chunk = arch.Add(id, out record.Row);
+		return new EntityView(this, id);
+	}
+
+	/// <summary>
+	///     Create or get an entity with the specified <paramref name="id" />.<br />
+	///     When <paramref name="id" /> is not specified or is 0 a new entity is spawned.
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public EntityView Entity(ulong id = 0)
+	{
+		lock (_newEntLock) {
+			EntityView ent;
+			if (id == 0 || !Exists(id)) {
+				// if (IsDeferred)
+				// {
+				// 	if (id == 0)
+				// 		id = ++_entities.MaxID;
+				// 	CreateDeferred(id);
+				// 	return new EntityView(this, id);
+				// }
+
+				ref var record = ref NewId(out id, id);
+				record.Archetype = Root;
+				record.Chunk = Root.Add(id, out record.Row);
+				ent = new EntityView(this, id);
+				OnEntityCreated?.Invoke(this, id);
+			} else {
+				ent = new EntityView(this, id);
+			}
+			return ent;
+		}
+	}
+
+	/// <summary>
+	///     Get or create an entity from a component.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <returns></returns>
+	public EntityView Entity<T>() where T : struct => new EntityView(this, Component<T>().ID);
+
+	/// <summary>
+	///     Create or get an entity using the specified <paramref name="name" />.<br />
+	///     A relation (Identity, Name) will be automatically added to the entity.
+	/// </summary>
+	/// <param name="name"></param>
+	/// <returns></returns>
+	public EntityView Entity(string name)
+	{
+		if (string.IsNullOrWhiteSpace(name))
+			return EntityView.Invalid;
+
+		var entity = new EntityView(this, NamingEntityMapper.SetName(0, name));
+
+		return entity;
+	}
+
+	/// <summary>
+	///     Delete the entity.<br />
+	///     Associated children are deleted too.
+	/// </summary>
+	/// <param name="entity"></param>
+	public void Delete(EcsID entity)
+	{
+		if (IsDeferred) {
+			if (Exists(entity))
+				DeleteDeferred(entity);
+
+			return;
+		}
+
+		lock (_newEntLock) {
+			OnEntityDeleted?.Invoke(this, entity);
+
+			ref var record = ref GetRecord(entity);
+			var removedId = record.Archetype.Remove(ref record);
+			EcsAssert.Assert(removedId == entity);
+			_entities.Remove(removedId);
+		}
+	}
+
+	/// <summary>
+	///     Check if the entity is valid and alive.
+	/// </summary>
+	/// <param name="entity"></param>
+	/// <returns></returns>
+	public bool Exists(EcsID entity) => _entities.Contains(entity);
+
+	/// <summary>
+	///     Mark the component as changed.<br />
+	/// </summary>
+	public void SetChanged(EcsID entity, EcsID component)
+	{
+		if (IsDeferred) {
+			SetChangedDeferred(entity, component);
+			return;
+		}
+
+		ref var record = ref GetRecord(entity);
+		var index = record.Archetype.GetComponentIndex(component);
+		EcsAssert.Panic(index >= 0, "Component not found in the entity");
+		record.Chunk.MarkChanged(index, record.Row, _ticks);
+	}
+
+	/// <inheritdoc cref="SetChanged" />
+	public void SetChanged<T>(EcsID entity) where T : struct
+	{
+		SetChanged(entity, Component<T>().ID);
+	}
+
+	/// <summary>
+	///     Use this function to analyze pairs members.<br />
+	///     Pairs members lose their generation count. This function will bring it back!.
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public EcsID GetAlive(EcsID id)
+	{
+		if (Exists(id))
+			return id;
+
+		if ((uint)id != id)
+			return 0;
+
+		var current = _entities.GetNoGeneration(id);
+		if (current == 0)
+			return 0;
+
+		if (!Exists(current))
+			return 0;
+
+		return current;
+	}
+
+	/// <summary>
+	///     The archetype sign.<br />The sign is unique.
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public ReadOnlySpan<ComponentInfo> GetType(EcsID id)
+	{
+		ref var record = ref GetRecord(id);
+		return record.Archetype.All.AsSpan();
+	}
+
+	/// <summary>
+	///     Add a Tag to the entity.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="entity"></param>
+	public void Add<T>(EcsID entity) where T : struct
+	{
+		ref readonly var cmp = ref Component<T>();
+		EcsAssert.Panic(cmp.Size <= 0, "this is not a tag");
+
+		if (IsDeferred && !Has(entity, cmp.ID)) {
+			AddDeferred<T>(entity);
+
+			return;
+		}
+
+		_ = Attach(entity, cmp.ID, cmp.Size);
+	}
+
+	/// <summary>
+	///     Set a Component to the entity.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="entity"></param>
+	/// <param name="component"></param>
+	public void Set<T>(EcsID entity, T component) where T : struct
+	{
+		ref readonly var cmp = ref Component<T>();
+		EcsAssert.Panic(cmp.Size > 0, "this is not a component");
+
+		if (IsDeferred && !Has(entity, cmp.ID)) {
+			SetDeferred(entity, component);
+
+			return;
+		}
+
+		var (raw, row) = Attach(entity, cmp.ID, cmp.Size);
+		var array = (T[])raw!;
+		array[row & ECS.Archetype.CHUNK_THRESHOLD] = component;
+	}
+
+	/// <summary>
+	///     Add a Tag to the entity.<br />Tag is an entity.
+	/// </summary>
+	/// <param name="entity"></param>
+	/// <param name="id"></param>
+	public void Add(EcsID entity, EcsID id)
+	{
+		if (IsDeferred && !Has(entity, id)) {
+			SetDeferred(entity, id, null, 0);
+
+			return;
+		}
+
+		_ = Attach(entity, id, 0);
+	}
+
+	/// <summary>
+	///     Remove a component or a tag from the entity.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="entity"></param>
+	public void Unset<T>(EcsID entity) where T : struct
+		=> Unset(entity, Component<T>().ID);
+
+	/// <summary>
+	///     Remove a component Id or a tag Id from the entity.
+	/// </summary>
+	/// <param name="entity"></param>
+	/// <param name="id"></param>
+	public void Unset(EcsID entity, EcsID id)
+	{
+		if (IsDeferred) {
+			UnsetDeferred(entity, id);
+
+			return;
+		}
+
+		Detach(entity, id);
+	}
+
+	/// <summary>
+	///     Check if the entity has a component or tag.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="entity"></param>
+	/// <returns></returns>
+	public bool Has<T>(EcsID entity) where T : struct
+		=> Has(entity, Component<T>().ID);
+
+	/// <summary>
+	///     Check if the entity has a component or tag.<br />
+	///     Component or tag is an entity.
+	/// </summary>
+	/// <param name="entity"></param>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public bool Has(EcsID entity, EcsID id) => IsAttached(ref GetRecord(entity), id);
+
+	/// <summary>
+	///     Get a component from the entity.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="entity"></param>
+	/// <returns></returns>
+	public ref T Get<T>(EcsID entity) where T : struct
+	{
+		ref readonly var cmp = ref Component<T>();
+		return ref GetUntrusted<T>(entity, cmp.ID, cmp.Size);
+	}
+
+	/// <summary>
+	///     Get the name associated to the entity.
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public string Name(EcsID id)
+	{
+		var name = NamingEntityMapper.GetName(id);
+		if (!string.IsNullOrEmpty(name))
+			return name;
+		return string.Empty;
+	}
+
+	public void UnsetName(EcsID id)
+	{
+		NamingEntityMapper.UnsetName(id);
+	}
+
+	/// <summary>
+	///     Print the archetype graph.
+	/// </summary>
+	public void PrintGraph()
+	{
+		Root.Print(0);
+	}
+
+	/// <summary>
+	/// </summary>
+	/// <returns></returns>
+	public QueryBuilder QueryBuilder() => new QueryBuilder(this);
+
+	/// <summary>
+	///     Execute a deferred block.
+	/// </summary>
+	/// <param name="fn"></param>
+	public void Deferred(Action<World> fn)
+	{
+		BeginDeferred();
+		fn(this);
+		EndDeferred();
+	}
+
+	/// <summary>
+	///     Uncached query iterator
+	/// </summary>
+	/// <param name="terms"></param>
+	/// <returns></returns>
+	public QueryIterator GetQueryIterator(Span<IQueryTerm> terms)
+	{
+		terms.SortNoAlloc(_comparisonTerms);
+		return new QueryIterator(Root, terms);
+	}
+
+	public readonly ref struct QueryIterator
+	{
+		private readonly ReadOnlySpan<IQueryTerm> _terms;
+		private readonly Stack<Archetype> _archetypeStack;
+
+		internal QueryIterator(Archetype root, ReadOnlySpan<IQueryTerm> terms)
+		{
+			_terms = terms;
+			_archetypeStack = Renting<Stack<Archetype>>.Rent();
+			_archetypeStack.Clear();
+			_archetypeStack.Push(root);
+		}
+
+		public bool Next(out Archetype? archetype)
+		{
+			while (_archetypeStack.TryPop(out archetype)) {
+				var result = archetype.MatchWith(_terms);
+
+				if (result == ArchetypeSearchResult.Stop)
+					break;
+
+				foreach (var edge in archetype._add) {
+					_archetypeStack.Push(edge.Archetype);
+				}
+
+				if (result == 0 && archetype.Count > 0) {
+					return true;
+				}
+			}
+
+			archetype = null;
+			return false; // No more archetypes to iterate over
+		}
+
+		public void Dispose()
+		{
+			_archetypeStack.Clear();
+			Renting<Stack<Archetype>>.Return(_archetypeStack);
+		}
+	}
+}

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="lib\**"/>
+        <EmbeddedResource Remove="lib\**"/>
+        <None Remove="lib\**"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Verse.MoonWorks\Verse.MoonWorks.csproj"/>
+    </ItemGroup>
+
+    <Import Project=".\CopyLibs.targets"/>
+
+</Project>
