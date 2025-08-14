@@ -61,8 +61,8 @@ public class Texture : SDLGPUResource
 		SampleCount sampleCount = SampleCount.One
 	)
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
 
 		var textureCreateInfo = new TextureCreateInfo {
 			Type = TextureType.TwoDimensional,
@@ -78,7 +78,7 @@ public class Texture : SDLGPUResource
 
 		var result = Create(device, textureCreateInfo);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -124,8 +124,8 @@ public class Texture : SDLGPUResource
 		uint levelCount = 1
 	)
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
 
 		var textureCreateInfo = new TextureCreateInfo {
 			Type = TextureType.TwoDimensionalArray,
@@ -141,7 +141,7 @@ public class Texture : SDLGPUResource
 
 		var result = Create(device, textureCreateInfo);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -180,8 +180,8 @@ public class Texture : SDLGPUResource
 		uint levelCount = 1
 	)
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
 
 		var textureCreateInfo = new TextureCreateInfo {
 			Type = TextureType.ThreeDimensional,
@@ -197,7 +197,7 @@ public class Texture : SDLGPUResource
 
 		var result = Create(device, textureCreateInfo);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -233,8 +233,8 @@ public class Texture : SDLGPUResource
 		uint levelCount = 1
 	)
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
 
 		var textureCreateInfo = new TextureCreateInfo {
 			Type = TextureType.Cube,
@@ -250,7 +250,7 @@ public class Texture : SDLGPUResource
 
 		var result = Create(device, textureCreateInfo);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -280,8 +280,8 @@ public class Texture : SDLGPUResource
 		uint levelCount = 1
 	)
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, name);
 
 		var textureCreateInfo = new TextureCreateInfo {
 			Type = TextureType.CubeArray,
@@ -297,7 +297,7 @@ public class Texture : SDLGPUResource
 
 		var result = Create(device, textureCreateInfo);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -318,7 +318,7 @@ public class Texture : SDLGPUResource
 		var handle = SDL.SDL_CreateGPUTexture(device.Handle, createInfo);
 
 		if (handle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
@@ -333,7 +333,7 @@ public class Texture : SDLGPUResource
 			SampleCount = createInfo.SampleCount,
 			UsageFlags = createInfo.Usage,
 			Size = CalculateSize(createInfo.Format, createInfo.Width, createInfo.Height, createInfo.LayerCountOrDepth),
-			Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Texture")
+			Name = SDL3.SDL.SDL_GetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Texture")
 		};
 	}
 

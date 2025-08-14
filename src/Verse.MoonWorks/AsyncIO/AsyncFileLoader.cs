@@ -1,7 +1,7 @@
 using Verse.MoonWorks.Audio;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
-using Verse.MoonWorks.lib.SDL3_CS.SDL3;
+using SDL3;
 
 namespace Verse.MoonWorks.AsyncIO;
 

@@ -13,22 +13,22 @@ public sealed class QueryBuilder
 	public World World { get; }
 
 	public QueryBuilder With<T>() where T : struct
-		=> With(World.Component<T>().ID);
+		=> With(World.GetComponent<T>().Id);
 
 	public QueryBuilder With(EcsID id)
 		=> Term(new WithTerm(id));
 
 	public QueryBuilder Without<T>() where T : struct
-		=> Without(World.Component<T>().ID);
+		=> Without(World.GetComponent<T>().Id);
 
 	public QueryBuilder Without(EcsID id)
 		=> Term(new WithoutTerm(id));
 
 	public QueryBuilder Optional<T>() where T : struct
 	{
-		ref readonly var cmp = ref World.Component<T>();
+		ref readonly var cmp = ref World.GetComponent<T>();
 		EcsAssert.Panic(cmp.Size > 0, "You can't access Tag as Component");
-		return Optional(cmp.ID);
+		return Optional(cmp.Id);
 	}
 
 	public QueryBuilder Optional(EcsID id)
@@ -65,7 +65,7 @@ public sealed class Query
 		Array.Sort(_terms);
 
 		TermsAccess = terms
-			.Where(s => Lookup.GetComponent(s.Id).Size > 0)
+			.Where(s => World.Registry.GetSlimComponent(s.Id).Size > 0)
 			.ToArray();
 
 		_indices = new int[TermsAccess.Length];
@@ -108,7 +108,7 @@ public sealed class Query
 		if (World.Exists(entity)) {
 			ref var record = ref World.GetRecord(entity);
 			foreach (var arch in _matchedArchetypes) {
-				if (arch.Id != record.Archetype.Id) continue;
+				if (arch.HashId != record.Archetype.HashId) continue;
 				var archetypes = new ReadOnlySpan<Archetype>(ref record.Archetype);
 				return Iter(archetypes, record.Row, 1);
 			}

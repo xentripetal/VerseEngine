@@ -1,6 +1,6 @@
 [submodule "src/Verse.MoonWorks/lib/SDL3-CS"]
 	path = src/Verse.MoonWorks/lib/SDL3-CS
-	url = https://github.com/flibitijibibo/SDL3-CS
+	url = https://github.com/flibitijibibo/SDL3-CS/
 [submodule "src/Verse.MoonWorks/lib/FAudio"]
 	path = src/Verse.MoonWorks/lib/FAudio
 	url = https://github.com/FNA-XNA/FAudio

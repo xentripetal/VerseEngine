@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using SDLBool = Verse.MoonWorks.lib.SDL3_CS.SDL3.SDL.SDLBool;
+using SDL3;
 
 namespace Verse.MoonWorks.AsyncIO;
 
@@ -44,15 +44,15 @@ internal static partial class SDL_AsyncIO
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_ReadAsyncIO(IntPtr asyncio, IntPtr ptr, ulong offset, ulong size, IntPtr queue, IntPtr userdata);
+	public static partial SDL.SDLBool SDL_ReadAsyncIO(IntPtr asyncio, IntPtr ptr, ulong offset, ulong size, IntPtr queue, IntPtr userdata);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_WriteAsyncIO(IntPtr asyncio, IntPtr ptr, ulong offset, ulong size, IntPtr queue, IntPtr userdata);
+	public static partial SDL.SDLBool SDL_WriteAsyncIO(IntPtr asyncio, IntPtr ptr, ulong offset, ulong size, IntPtr queue, IntPtr userdata);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_CloseAsyncIO(IntPtr asyncio, SDLBool flush, IntPtr queue, IntPtr userdata);
+	public static partial SDL.SDLBool SDL_CloseAsyncIO(IntPtr asyncio, SDL.SDLBool flush, IntPtr queue, IntPtr userdata);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -64,11 +64,11 @@ internal static partial class SDL_AsyncIO
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_GetAsyncIOResult(IntPtr queue, out Outcome outcome);
+	public static partial SDL.SDLBool SDL_GetAsyncIOResult(IntPtr queue, out Outcome outcome);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_WaitAsyncIOResult(IntPtr queue, out Outcome outcome, int timeoutMS);
+	public static partial SDL.SDLBool SDL_WaitAsyncIOResult(IntPtr queue, out Outcome outcome, int timeoutMS);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -76,5 +76,5 @@ internal static partial class SDL_AsyncIO
 
 	[LibraryImport(nativeLibName, StringMarshalling = StringMarshalling.Utf8)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_LoadFileAsync(string file, IntPtr queue, IntPtr userdata);
+	public static partial SDL.SDLBool SDL_LoadFileAsync(string file, IntPtr queue, IntPtr userdata);
 }

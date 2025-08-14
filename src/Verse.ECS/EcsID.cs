@@ -7,10 +7,6 @@ public static class EcsIdEx
 		=> id != 0;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static EcsID RealId(this EcsID id)
-		=> IDOp.RealID(id);
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Generation(this EcsID id)
 		=> (int)IDOp.GetGeneration(id);
 }

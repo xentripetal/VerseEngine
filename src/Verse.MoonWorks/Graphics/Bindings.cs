@@ -7,9 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using Verse.MoonWorks.Graphics.Resources;
-using Verse.MoonWorks.lib.SDL3_CS.SDL3;
+using SDL3;
 using Buffer = Verse.MoonWorks.Graphics.Resources.Buffer;
-using SDLBool = Verse.MoonWorks.lib.SDL3_CS.SDL3.SDL.SDLBool;
+using SDLBool = SDL3.SDL.SDLBool;
 
 namespace Verse.MoonWorks.Graphics;
 

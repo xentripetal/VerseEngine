@@ -34,8 +34,8 @@ public class Buffer : SDLGPUResource
 		uint elementCount
 	) where T : unmanaged
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
 
 		var result = Create(device, new BufferCreateInfo {
 			Usage = usageFlags,
@@ -43,7 +43,7 @@ public class Buffer : SDLGPUResource
 			Props = props
 		});
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 
 		return result;
 	}
@@ -72,14 +72,14 @@ public class Buffer : SDLGPUResource
 	{
 		var handle = SDL.SDL_CreateGPUBuffer(device.Handle, createInfo);
 		if (handle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 		return new Buffer(device) {
 			Handle = handle,
 			Size = createInfo.Size,
 			UsageFlags = createInfo.Usage,
-			Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, "Buffer")
+			Name = SDL3.SDL.SDL_GetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, "Buffer")
 		};
 	}
 

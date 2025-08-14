@@ -6,7 +6,7 @@ namespace Verse.ECS;
 
 #if NET9_0_OR_GREATER
 
-public sealed class FuncSystem<TArg> where TArg : notnull
+public partial class FuncSystem<TArg> where TArg : notnull
 {
 	private readonly LinkedList<FuncSystem<TArg>> _after = new LinkedList<FuncSystem<TArg>>();
 	private readonly TArg _arg;
@@ -153,7 +153,7 @@ public sealed class SystemTicks
 	public uint ThisRun { get; set; }
 }
 
-public class Scheduler
+public partial class Scheduler
 {
 	private readonly Dictionary<Type, IEventParam> _events = new Dictionary<Type, IEventParam>();
 	private readonly List<FuncSystem<World>> _multiThreads = new List<FuncSystem<World>>();
@@ -379,6 +379,7 @@ public abstract class SystemParam<T> : ISystemParam<T>
 public interface ISystemParam
 {
 	internal ref int UseIndex { get; }
+	
 
 	void Lock(SystemTicks ticks);
 	void Unlock();
@@ -486,8 +487,6 @@ public sealed class EventReader<T> : SystemParam<World>, IIntoSystemParam<World>
 
 partial class World : SystemParam<World>, IIntoSystemParam<World>
 {
-	public World() : this(256) { }
-
 	public static ISystemParam<World> Generate(World arg) => arg;
 }
 

@@ -1,5 +1,5 @@
 ﻿using System.Runtime.InteropServices;
-using Verse.MoonWorks.lib.SDL3_CS.SDL3;
+using SDL3;
 
 namespace Verse.MoonWorks;
 

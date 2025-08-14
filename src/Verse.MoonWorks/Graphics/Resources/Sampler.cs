@@ -22,13 +22,13 @@ public class Sampler : SDLGPUResource
 		);
 
 		if (handle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
 		return new Sampler(device) {
 			Handle = handle,
-			Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(samplerCreateInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_SAMPLER_CREATE_NAME_STRING, "Sampler")
+			Name = SDL3.SDL.SDL_GetStringProperty(samplerCreateInfo.Props, SDL3.SDL.SDL_PROP_GPU_SAMPLER_CREATE_NAME_STRING, "Sampler")
 		};
 	}
 
@@ -40,16 +40,16 @@ public class Sampler : SDLGPUResource
 	{
 		var cleanProps = false;
 		if (samplerCreateInfo.Props == 0) {
-			samplerCreateInfo.Props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
+			samplerCreateInfo.Props = SDL3.SDL.SDL_CreateProperties();
 			cleanProps = true;
 		}
 
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(samplerCreateInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_SAMPLER_CREATE_NAME_STRING, name);
+		SDL3.SDL.SDL_SetStringProperty(samplerCreateInfo.Props, SDL3.SDL.SDL_PROP_GPU_SAMPLER_CREATE_NAME_STRING, name);
 
 		var result = Create(device, samplerCreateInfo);
 
 		if (cleanProps) {
-			lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(samplerCreateInfo.Props);
+			SDL3.SDL.SDL_DestroyProperties(samplerCreateInfo.Props);
 		}
 
 		return result;

@@ -2,22 +2,19 @@ namespace Verse.ECS;
 
 public sealed partial class World : IDisposable
 {
+	public ComponentRegistry Registry;
 
-	private static readonly Comparison<ComponentInfo> _comparisonCmps = (a, b)
-		=> ComponentComparer.CompareTerms(null!, a.ID, b.ID);
-	private static readonly Comparison<EcsID> _comparisonIds = (a, b)
-		=> ComponentComparer.CompareTerms(null!, a, b);
+	private static readonly Comparison<SlimComponent> _comparisonCmps = (a, b)
+		=> ComponentComparer.CompareTerms(a.Id, b.Id);
 	private static readonly Comparison<IQueryTerm> _comparisonTerms = (a, b)
 		=> a.CompareTo(b);
 
 	private readonly FastIdLookup<EcsID> _cachedComponents = new FastIdLookup<EcsID>();
 	private readonly ComponentComparer _comparer;
 	private readonly EntitySparseSet<EcsRecord> _entities = new EntitySparseSet<EcsRecord>();
-	private readonly EcsID _maxCmpId;
 	private readonly object _newEntLock = new object();
-	private readonly Dictionary<EcsID, Archetype> _typeIndex = new Dictionary<EcsID, Archetype>();
 	private uint _ticks;
-
+	private ulong _archetypeGeneration;
 
 	internal Archetype Root { get; }
 	internal EcsID LastArchetypeId { get; set; }
@@ -36,18 +33,14 @@ public sealed partial class World : IDisposable
 		return ref record;
 	}
 
-	internal ref readonly ComponentInfo Component<T>() where T : struct
+	internal ref readonly SlimComponent GetComponent<T>() where T : struct
 	{
-		ref readonly var lookup = ref Lookup.Component<T>.Value;
-
-		EcsAssert.Panic(lookup.ID < _maxCmpId,
-			"Increase the minimum number for components when initializing the world [ex: new World(1024)]");
-
-		ref var idx = ref _cachedComponents.GetOrCreate(lookup.ID, out var exists);
+		// todo - is ref here actually faster?
+		ref readonly var lookup = ref Registry.GetSlimComponent<T>();
+		ref var idx = ref _cachedComponents.GetOrCreate(lookup.Id, out var exists);
 		if (!exists) {
-			idx = Entity(lookup.ID).Set(lookup).ID;
-
-			NamingEntityMapper.SetName(idx, Lookup.Component<T>.Name);
+			idx = Entity(lookup.Id).Set(lookup).ID;
+			NamingEntityMapper.SetName(idx, Component<T>.StaticName);
 		}
 
 		return ref lookup;
@@ -62,7 +55,7 @@ public sealed partial class World : IDisposable
 		return ref record;
 	}
 
-	private void Detach(EcsID entity, EcsID id)
+	private void Detach(EcsID entity, ulong id)
 	{
 		ref var record = ref GetRecord(entity);
 		var oldArch = record.Archetype;
@@ -70,7 +63,7 @@ public sealed partial class World : IDisposable
 		if (oldArch.GetAnyIndex(id) < 0)
 			return;
 
-		OnComponentUnset?.Invoke(this, entity, new ComponentInfo(id, -1));
+		OnComponentUnset?.Invoke(this, entity, new SlimComponent(id, -1));
 
 		BeginDeferred();
 
@@ -82,15 +75,15 @@ public sealed partial class World : IDisposable
 		if (foundArch == null) {
 			var hash = 0ul;
 			foreach (ref readonly var cmp in oldArch.All.AsSpan()) {
-				if (cmp.ID != id)
-					hash = UnorderedSetHasher.Combine(hash, cmp.ID);
+				if (cmp.Id != id)
+					hash = UnorderedSetHasher.Combine(hash, cmp.Id);
 			}
 
-			if (!_typeIndex.TryGetValue(hash, out foundArch)) {
-				var arr = new ComponentInfo[oldArch.All.Length - 1];
+			if (!Archetypes.TryGetFromHashId(hash, out foundArch)) {
+				var arr = new SlimComponent[oldArch.All.Length - 1];
 				for (int i = 0, j = 0; i < oldArch.All.Length; ++i) {
 					ref readonly var item = ref oldArch.All[i];
-					if (item.ID != id)
+					if (item.Id != id)
 						arr[j++] = item;
 				}
 
@@ -104,45 +97,45 @@ public sealed partial class World : IDisposable
 
 	}
 
-	private (Array?, int) Attach(EcsID entity, EcsID id, int size)
+	private (Array?, int) Attach(EcsID entity, ref readonly SlimComponent component)
 	{
 		ref var record = ref GetRecord(entity);
 		var oldArch = record.Archetype;
 
-		var column = size > 0 ? oldArch.GetComponentIndex(id) : oldArch.GetAnyIndex(id);
+		var column = component.IsTag ? oldArch.GetAnyIndex(component.Id) : oldArch.GetComponentIndex(component.Id);
 		if (column >= 0) {
-			if (size > 0) {
+			if (!component.IsTag) {
 				record.Chunk.MarkChanged(column, record.Row, _ticks);
 			}
-			return (size > 0 ? record.Chunk.Columns![column].Data : null, record.Row);
+			return (component.IsTag ? null : record.Chunk.Columns![column].Data, record.Row);
 		}
 
 		BeginDeferred();
 
-		var foundArch = oldArch.TraverseRight(id);
+		var foundArch = oldArch.TraverseRight(component.Id);
 		if (foundArch == null) {
 			var hash = 0ul;
 
 			var found = false;
 			foreach (ref readonly var cmp in oldArch.All.AsSpan()) {
-				if (!found && cmp.ID > id) {
-					hash = UnorderedSetHasher.Combine(hash, id);
+				if (!found && cmp.Id > component.Id) {
+					hash = UnorderedSetHasher.Combine(hash, component.Id);
 					found = true;
 				}
 
-				hash = UnorderedSetHasher.Combine(hash, cmp.ID);
+				hash = UnorderedSetHasher.Combine(hash, cmp.Id);
 			}
 
 			if (!found)
-				hash = UnorderedSetHasher.Combine(hash, id);
+				hash = UnorderedSetHasher.Combine(hash, component.Id);
 
-			if (!_typeIndex.TryGetValue(hash, out foundArch)) {
-				var arr = new ComponentInfo[oldArch.All.Length + 1];
+			if (!Archetypes.TryGetFromHashId(hash, out foundArch)) {
+				var arr = new SlimComponent[oldArch.All.Length + 1];
 				oldArch.All.CopyTo(arr, 0);
-				arr[^1] = new ComponentInfo(id, size);
-				arr.AsSpan().SortNoAlloc(_comparisonCmps);
+				arr[^1] = component;
+				arr.AsSpan().Sort(_comparisonCmps);
 
-				foundArch = NewArchetype(oldArch, arr, id);
+				foundArch = NewArchetype(oldArch, arr, component.Id);
 			}
 		}
 
@@ -150,28 +143,25 @@ public sealed partial class World : IDisposable
 		record.Archetype = foundArch!;
 		EndDeferred();
 
-		OnComponentSet?.Invoke(this, entity, new ComponentInfo(id, size));
+		OnComponentSet?.Invoke(this, entity, component);
 
-		column = size > 0 ? foundArch.GetComponentIndex(id) : foundArch.GetAnyIndex(id);
-		if (size > 0) {
+		column = component.IsTag ? foundArch.GetAnyIndex(component.Id) : foundArch.GetComponentIndex(component.Id);
+		if (!component.IsTag) {
 			record.Chunk.MarkAdded(column, record.Row, _ticks);
 		}
-		return (size > 0 ? record.Chunk.Columns![column].Data : null, record.Row);
+		return (component.IsTag ? null : record.Chunk.Columns![column].Data, record.Row);
 	}
 
 	internal bool IsAttached(ref EcsRecord record, EcsID id)
 	{
-		if (record.Archetype.HasIndex(id))
-			return true;
-
-		return id == Defaults.Wildcard.ID;
+		return record.Archetype.HasIndex(id);
 	}
 
-	private Archetype NewArchetype(Archetype oldArch, ComponentInfo[] sign, EcsID id)
+	private Archetype NewArchetype(Archetype oldArch, SlimComponent[] sign, EcsID hashId)
 	{
-		var archetype = Root.InsertVertex(oldArch, sign, id);
-		_typeIndex.Add(archetype.Id, archetype);
-		LastArchetypeId = archetype.Id;
+		var archetype = Root.InsertVertex(oldArch, sign, hashId, _archetypeGeneration++);
+		Archetypes.Add(archetype);
+		LastArchetypeId = archetype.HashId;
 		return archetype;
 	}
 

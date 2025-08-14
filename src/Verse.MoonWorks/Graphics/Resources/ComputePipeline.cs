@@ -84,11 +84,11 @@ public class ComputePipeline : SDLGPUResource
 			var cleanProps = false;
 			if (computePipelineCreateInfo.Name != null) {
 				if (pipelineCreateInfo.Props == 0) {
-					pipelineCreateInfo.Props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
+					pipelineCreateInfo.Props = SDL3.SDL.SDL_CreateProperties();
 					cleanProps = true;
 				}
 
-				lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(pipelineCreateInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_COMPUTEPIPELINE_CREATE_NAME_STRING, computePipelineCreateInfo.Name);
+				SDL3.SDL.SDL_SetStringProperty(pipelineCreateInfo.Props, SDL3.SDL.SDL_PROP_GPU_COMPUTEPIPELINE_CREATE_NAME_STRING, computePipelineCreateInfo.Name);
 			}
 
 			var computePipelineHandle = SDL.SDL_CreateGPUComputePipeline(
@@ -99,7 +99,7 @@ public class ComputePipeline : SDLGPUResource
 			NativeMemory.Free(entryPointBuffer);
 
 			if (computePipelineHandle == nint.Zero) {
-				Logger.LogError($"Could not create compute pipeline: {lib.SDL3_CS.SDL3.SDL.SDL_GetError()}");
+				Logger.LogError($"Could not create compute pipeline: {SDL3.SDL.SDL_GetError()}");
 				return null;
 			}
 
@@ -114,11 +114,11 @@ public class ComputePipeline : SDLGPUResource
 				ThreadCountX = computePipelineCreateInfo.ThreadCountX,
 				ThreadCountY = computePipelineCreateInfo.ThreadCountY,
 				ThreadCountZ = computePipelineCreateInfo.ThreadCountZ,
-				Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(pipelineCreateInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_COMPUTEPIPELINE_CREATE_NAME_STRING, "Compute Pipeline")
+				Name = SDL3.SDL.SDL_GetStringProperty(pipelineCreateInfo.Props, SDL3.SDL.SDL_PROP_GPU_COMPUTEPIPELINE_CREATE_NAME_STRING, "Compute Pipeline")
 			};
 
 			if (cleanProps) {
-				lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(pipelineCreateInfo.Props);
+				SDL3.SDL.SDL_DestroyProperties(pipelineCreateInfo.Props);
 			}
 
 			return computePipeline;
@@ -167,7 +167,7 @@ public class ComputePipeline : SDLGPUResource
 
 			if (computePipelineHandle == nint.Zero) {
 				Logger.LogError("Failed to create compute pipeline!");
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 				return null;
 			}
 
@@ -268,7 +268,7 @@ public class ComputePipeline : SDLGPUResource
 
 			if (computePipelineHandle == nint.Zero) {
 				Logger.LogError("Failed to create compute pipeline!");
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 				return null;
 			}
 

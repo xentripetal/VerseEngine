@@ -22,9 +22,6 @@ internal sealed class EntitySparseSet<T>
 
 	public int Length => _count - 1;
 
-	public ref ulong MaxID => ref _maxID;
-
-
 	public ref T CreateNew(out ulong id)
 	{
 		var count = _count++;
@@ -324,11 +321,7 @@ internal sealed class Vec<T> where T : unmanaged
 		if (Count >= Capacity)
 			EnsureCapacity(Capacity * 2);
 
-#if NET
 		return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_data), Count++);
-#else
-		return ref Unsafe.Add(ref MemoryMarshal.GetReference(_data.AsSpan()), Count++);
-#endif
 	}
 
 	public void EnsureCapacity(int newCapacity)

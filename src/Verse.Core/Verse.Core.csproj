@@ -5,9 +5,6 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <Folder Include="Scheduler\"/>
-    </ItemGroup>
-    <ItemGroup>
         <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj"/>
     </ItemGroup>
 </Project>

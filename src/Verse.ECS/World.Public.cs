@@ -7,24 +7,20 @@ public sealed partial class World
 {
 	/// <summary>
 	///     Create the world.
-	///     <para />
-	///     Optionally specify the number of components the world will handle.
-	///     <para />
 	/// </summary>
-	/// <param name="maxComponentId"></param>
-	public World(ulong maxComponentId = 256)
+	public World()
 	{
-		_comparer = new ComponentComparer(this);
+		Registry = new ComponentRegistry(this);
+		Archetypes = new ArchetypeRegistry();
+		_comparer = new ComponentComparer();
 		Root = new Archetype(
 			this,
 			[],
-			_comparer
+			_comparer,
+			_archetypeGeneration++
 		);
-		_typeIndex.Add(Root.Id, Root);
-		LastArchetypeId = Root.Id;
-
-		_maxCmpId = maxComponentId;
-		_entities.MaxID = maxComponentId;
+		Archetypes.Add(Root);
+		LastArchetypeId = Root.HashId;
 
 		RelationshipEntityMapper = new RelationshipEntityMapper(this);
 		NamingEntityMapper = new NamingEntityMapper(this);
@@ -32,6 +28,7 @@ public sealed partial class World
 		OnPluginInitialization?.Invoke(this);
 	}
 
+	public ArchetypeRegistry Archetypes { get; }
 
 
 	/// <summary>
@@ -41,8 +38,6 @@ public sealed partial class World
 	/// </summary>
 	public int EntityCount => _entities.Length;
 
-
-
 	/// <summary>
 	///     Cleanup the world.
 	/// </summary>
@@ -50,17 +45,15 @@ public sealed partial class World
 	{
 		_entities.Clear();
 		Root.Clear();
-		_typeIndex.Clear();
-		_cachedComponents.Clear();
+		Archetypes.Clear();
 		RelationshipEntityMapper.Clear();
 		NamingEntityMapper.Clear();
 
 	}
 
 
-
 	public event Action<World, EcsID>? OnEntityCreated, OnEntityDeleted;
-	public event Action<World, EcsID, ComponentInfo>? OnComponentSet, OnComponentUnset;
+	public event Action<World, EcsID, SlimComponent>? OnComponentSet, OnComponentUnset;
 	public static event Action<World>? OnPluginInitialization;
 
 	/// <summary>
@@ -70,7 +63,7 @@ public sealed partial class World
 	public int RemoveEmptyArchetypes()
 	{
 		var removed = 0;
-		Root?.RemoveEmptyArchetypes(ref removed, _typeIndex);
+		Root?.RemoveEmptyArchetypes(ref removed, Archetypes);
 		if (removed > 0)
 			LastArchetypeId = ulong.MaxValue;
 		return removed;
@@ -81,24 +74,24 @@ public sealed partial class World
 	/// </summary>
 	/// <param name="ids"></param>
 	/// <returns></returns>
-	public Archetype Archetype(params Span<ComponentInfo> ids)
+	public Archetype Archetype(params Span<SlimComponent> ids)
 	{
 		if (ids.IsEmpty)
 			return Root;
 
-		ids.SortNoAlloc(_comparisonCmps);
+		ids.Sort(_comparisonCmps);
 
 		var hash = 0ul;
 		foreach (ref readonly var cmp in ids) {
-			hash = UnorderedSetHasher.Combine(hash, cmp.ID);
+			hash = UnorderedSetHasher.Combine(hash, cmp.Id);
 		}
-		if (!_typeIndex.TryGetValue(hash, out var archetype)) {
+		if (!Archetypes.TryGetFromHashId(hash, out var archetype)) {
 			var archLessOne = Archetype(ids[..^1]);
-			var arr = new ComponentInfo[ids.Length];
+			var arr = new SlimComponent[ids.Length];
 			archLessOne.All.CopyTo(arr, 0);
 			arr[^1] = ids[^1];
-			arr.AsSpan().SortNoAlloc(_comparisonCmps);
-			archetype = NewArchetype(archLessOne, arr, arr[^1].ID);
+			arr.AsSpan().Sort(_comparisonCmps);
+			archetype = NewArchetype(archLessOne, arr, arr[^1].Id);
 		}
 
 		return archetype;
@@ -153,7 +146,7 @@ public sealed partial class World
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	/// <returns></returns>
-	public EntityView Entity<T>() where T : struct => new EntityView(this, Component<T>().ID);
+	public EntityView Entity<T>() where T : struct => new EntityView(this, GetComponent<T>().Id);
 
 	/// <summary>
 	///     Create or get an entity using the specified <paramref name="name" />.<br />
@@ -221,7 +214,7 @@ public sealed partial class World
 	/// <inheritdoc cref="SetChanged" />
 	public void SetChanged<T>(EcsID entity) where T : struct
 	{
-		SetChanged(entity, Component<T>().ID);
+		SetChanged(entity, GetComponent<T>().Id);
 	}
 
 	/// <summary>
@@ -253,7 +246,7 @@ public sealed partial class World
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public ReadOnlySpan<ComponentInfo> GetType(EcsID id)
+	public ReadOnlySpan<SlimComponent> GetType(EcsID id)
 	{
 		ref var record = ref GetRecord(id);
 		return record.Archetype.All.AsSpan();
@@ -266,16 +259,28 @@ public sealed partial class World
 	/// <param name="entity"></param>
 	public void Add<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size <= 0, "this is not a tag");
 
-		if (IsDeferred && !Has(entity, cmp.ID)) {
+		if (IsDeferred && !Has(entity, cmp.Id)) {
 			AddDeferred<T>(entity);
 
 			return;
 		}
 
-		_ = Attach(entity, cmp.ID, cmp.Size);
+		_ = Attach(entity, in cmp);
+	}
+
+	public void Add(EcsID entity, EcsID id)
+	{
+		if (IsDeferred && !Has(entity, id)) {
+			SetDeferred(entity, id, null, 0);
+
+			return;
+		}
+
+		var c = new SlimComponent(id, 0);
+		_ = Attach(entity, in c);
 	}
 
 	/// <summary>
@@ -286,34 +291,18 @@ public sealed partial class World
 	/// <param name="component"></param>
 	public void Set<T>(EcsID entity, T component) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size > 0, "this is not a component");
 
-		if (IsDeferred && !Has(entity, cmp.ID)) {
+		if (IsDeferred && !Has(entity, cmp.Id)) {
 			SetDeferred(entity, component);
 
 			return;
 		}
 
-		var (raw, row) = Attach(entity, cmp.ID, cmp.Size);
+		var (raw, row) = Attach(entity, in cmp);
 		var array = (T[])raw!;
 		array[row & ECS.Archetype.CHUNK_THRESHOLD] = component;
-	}
-
-	/// <summary>
-	///     Add a Tag to the entity.<br />Tag is an entity.
-	/// </summary>
-	/// <param name="entity"></param>
-	/// <param name="id"></param>
-	public void Add(EcsID entity, EcsID id)
-	{
-		if (IsDeferred && !Has(entity, id)) {
-			SetDeferred(entity, id, null, 0);
-
-			return;
-		}
-
-		_ = Attach(entity, id, 0);
 	}
 
 	/// <summary>
@@ -322,7 +311,7 @@ public sealed partial class World
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
 	public void Unset<T>(EcsID entity) where T : struct
-		=> Unset(entity, Component<T>().ID);
+		=> Unset(entity, GetComponent<T>().Id);
 
 	/// <summary>
 	///     Remove a component Id or a tag Id from the entity.
@@ -347,7 +336,7 @@ public sealed partial class World
 	/// <param name="entity"></param>
 	/// <returns></returns>
 	public bool Has<T>(EcsID entity) where T : struct
-		=> Has(entity, Component<T>().ID);
+		=> Has(entity, GetComponent<T>().Id);
 
 	/// <summary>
 	///     Check if the entity has a component or tag.<br />
@@ -366,8 +355,8 @@ public sealed partial class World
 	/// <returns></returns>
 	public ref T Get<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
-		return ref GetUntrusted<T>(entity, cmp.ID, cmp.Size);
+		ref readonly var cmp = ref GetComponent<T>();
+		return ref GetUntrusted<T>(entity, cmp.Id, cmp.Size);
 	}
 
 	/// <summary>
@@ -419,7 +408,7 @@ public sealed partial class World
 	/// <returns></returns>
 	public QueryIterator GetQueryIterator(Span<IQueryTerm> terms)
 	{
-		terms.SortNoAlloc(_comparisonTerms);
+		terms.Sort(_comparisonTerms);
 		return new QueryIterator(Root, terms);
 	}
 

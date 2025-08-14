@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 using Verse.MoonWorks.Graphics.Resources;
-using Verse.MoonWorks.lib.SDL3_CS.SDL3;
+using SDL3;
 using Verse.MoonWorks.Storage;
 
 namespace Verse.MoonWorks.Graphics;

@@ -78,11 +78,11 @@ public class GraphicsPipeline : SDLGPUResource
 		var cleanProps = false;
 		if (graphicsPipelineCreateInfo.Name != null) {
 			if (createInfo.Props == 0) {
-				createInfo.Props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
+				createInfo.Props = SDL3.SDL.SDL_CreateProperties();
 				cleanProps = true;
 			}
 
-			lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, graphicsPipelineCreateInfo.Name);
+			SDL3.SDL.SDL_SetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, graphicsPipelineCreateInfo.Name);
 		}
 
 		var handle = SDL.SDL_CreateGPUGraphicsPipeline(device.Handle, createInfo);
@@ -98,11 +98,11 @@ public class GraphicsPipeline : SDLGPUResource
 			Handle = handle,
 			VertexShader = graphicsPipelineCreateInfo.VertexShader,
 			FragmentShader = graphicsPipelineCreateInfo.FragmentShader,
-			Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "Graphics Pipeline")
+			Name = SDL3.SDL.SDL_GetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_GRAPHICSPIPELINE_CREATE_NAME_STRING, "Graphics Pipeline")
 		};
 
 		if (cleanProps) {
-			lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(createInfo.Props);
+			SDL3.SDL.SDL_DestroyProperties(createInfo.Props);
 		}
 
 		return result;

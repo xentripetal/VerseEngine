@@ -25,6 +25,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Generators", "Generators", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Verse.ECS.Internal.Generator", "src\Generators\Verse.ECS.Internal.Generator\Verse.ECS.Internal.Generator.csproj", "{DE835011-F781-492D-9C70-06202FBE4422}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Verse.ECS.Systems", "src\Verse.ECS.Systems\Verse.ECS.Systems.csproj", "{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,6 +72,10 @@ Global
 		{DE835011-F781-492D-9C70-06202FBE4422}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DE835011-F781-492D-9C70-06202FBE4422}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DE835011-F781-492D-9C70-06202FBE4422}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B2EF556F-6AF6-4B4B-957F-91AEE35429CD} = {89704874-E0AF-47C8-8DAD-EC96042281FC}

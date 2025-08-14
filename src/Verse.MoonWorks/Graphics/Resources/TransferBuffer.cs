@@ -50,8 +50,8 @@ public class TransferBuffer : SDLGPUResource
 		uint elementCount
 	) where T : unmanaged
 	{
-		var props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, name);
+		var props = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetStringProperty(props, SDL3.SDL.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, name);
 
 		var result = Create(device, new TransferBufferCreateInfo {
 			Usage = usage,
@@ -59,7 +59,7 @@ public class TransferBuffer : SDLGPUResource
 			Props = props
 		});
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(props);
+		SDL3.SDL.SDL_DestroyProperties(props);
 		return result;
 	}
 
@@ -70,13 +70,13 @@ public class TransferBuffer : SDLGPUResource
 	{
 		var handle = SDL.SDL_CreateGPUTransferBuffer(device.Handle, createInfo);
 		if (handle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 		return new TransferBuffer(device) {
 			Handle = handle,
 			Size = createInfo.Size,
-			Name = lib.SDL3_CS.SDL3.SDL.SDL_GetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, "TransferBuffer")
+			Name = SDL3.SDL.SDL_GetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, "TransferBuffer")
 		};
 	}
 
@@ -94,7 +94,7 @@ public class TransferBuffer : SDLGPUResource
 			);
 
 			if (MapPointer == IntPtr.Zero) {
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 			}
 		}
 	}

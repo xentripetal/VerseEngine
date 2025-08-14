@@ -7,10 +7,12 @@ internal readonly struct Column
 {
 	public readonly Array Data;
 	public readonly uint[] ChangedTicks, AddedTicks;
+	private readonly World _world;
 
-	internal Column(ref readonly ComponentInfo component, int chunkSize)
+	internal Column(World world, ref readonly SlimComponent slimComponent, int chunkSize)
 	{
-		Data = Lookup.GetArray(component.ID, chunkSize)!;
+		_world = world;
+		Data = world.Registry.GetArray(slimComponent.Id, chunkSize)!;
 		ChangedTicks = new uint[chunkSize];
 		AddedTicks = new uint[chunkSize];
 	}
@@ -41,13 +43,15 @@ internal struct ArchetypeChunk
 {
 	internal readonly Column[]? Columns;
 	internal readonly EntityView[] Entities;
+	private readonly World _world;
 
-	internal ArchetypeChunk(ReadOnlySpan<ComponentInfo> sign, int chunkSize)
+	internal ArchetypeChunk(World world, ReadOnlySpan<SlimComponent> sign, int chunkSize)
 	{
+		_world = world;
 		Entities = new EntityView[chunkSize];
 		Columns = new Column[sign.Length];
 		for (var i = 0; i < sign.Length; ++i) {
-			Columns[i] = new Column(in sign[i], chunkSize);
+			Columns[i] = new Column(world, in sign[i], chunkSize);
 		}
 	}
 
@@ -130,6 +134,7 @@ internal struct ArchetypeChunk
 
 public sealed class Archetype : IComparable<Archetype>
 {
+	public static ArchetypeGenerationComparer GenerationComparer = new ArchetypeGenerationComparer();
 	private const int ARCHETYPE_INITIAL_CAPACITY = 1;
 
 	internal const int CHUNK_SIZE = 4096;
@@ -141,13 +146,14 @@ public sealed class Archetype : IComparable<Archetype>
 	private readonly int[] _fastLookup;
 
 
-	public readonly ComponentInfo[] All, Components, Tags, Pairs = Array.Empty<ComponentInfo>();
+	public readonly SlimComponent[] All, Components, Tags, Pairs = Array.Empty<SlimComponent>();
 	private ArchetypeChunk[] _chunks;
 
 	internal Archetype(
 		World world,
-		ComponentInfo[] sign,
-		ComponentComparer comparer
+		SlimComponent[] sign,
+		ComponentComparer comparer,
+		ulong generation
 	)
 	{
 		_comparer = comparer;
@@ -156,6 +162,7 @@ public sealed class Archetype : IComparable<Archetype>
 		Components = All.Where(x => x.Size > 0).ToArray();
 		Tags = All.Where(x => x.Size <= 0).ToArray();
 		_chunks = new ArchetypeChunk[ARCHETYPE_INITIAL_CAPACITY];
+		Generation = generation;
 
 
 		var hash = 0ul;
@@ -163,22 +170,22 @@ public sealed class Archetype : IComparable<Archetype>
 		var allDict = new Dictionary<EcsID, int>();
 		var maxId = -1;
 		for (int i = 0, cur = 0; i < sign.Length; ++i) {
-			hash = UnorderedSetHasher.Combine(hash, sign[i].ID);
+			hash = UnorderedSetHasher.Combine(hash, sign[i].Id);
 
 			if (sign[i].Size > 0) {
-				dict.Add(sign[i].ID, cur++);
-				maxId = Math.Max(maxId, (int)sign[i].ID);
+				dict.Add(sign[i].Id, cur++);
+				maxId = Math.Max(maxId, (int)sign[i].Id);
 			}
 
-			allDict.Add(sign[i].ID, i);
+			allDict.Add(sign[i].Id, i);
 		}
 
-		Id = hash;
+		HashId = hash;
 
 		_fastLookup = new int[maxId + 1];
 		_fastLookup.AsSpan().Fill(-1);
-		foreach (var (id, i) in dict) {
-			_fastLookup[(int)id] = i;
+		foreach (var (cid, i) in dict) {
+			_fastLookup[(int)cid] = i;
 		}
 
 		_componentsLookup = dict.ToFrozenDictionary();
@@ -191,11 +198,12 @@ public sealed class Archetype : IComparable<Archetype>
 
 	public World World { get; }
 	public int Count { get; private set; }
-	public EcsID Id { get; }
+	public EcsID HashId { get; }
+	public ulong Generation { get; }
 	internal ReadOnlySpan<ArchetypeChunk> Chunks => _chunks.AsSpan(0, Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
 	internal int EmptyChunks => _chunks.Length - (Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
 
-	public int CompareTo(Archetype? other) => Id.CompareTo(other?.Id);
+	public int CompareTo(Archetype? other) => HashId.CompareTo(other?.HashId);
 
 	private ref ArchetypeChunk GetOrCreateChunk(int index)
 	{
@@ -206,7 +214,7 @@ public sealed class Archetype : IComparable<Archetype>
 
 		ref var chunk = ref _chunks[index];
 		if (chunk.Columns == null) {
-			chunk = new ArchetypeChunk(Components, CHUNK_SIZE);
+			chunk = new ArchetypeChunk(World, Components, CHUNK_SIZE);
 		}
 
 		return ref chunk;
@@ -225,9 +233,8 @@ public sealed class Archetype : IComparable<Archetype>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public int GetComponentIndex<T>() where T : struct
 	{
-		var id = Lookup.Component<T>.HashCode;
-		var size = Lookup.Component<T>.Size;
-		return size > 0 ? GetComponentIndex(id) : GetAnyIndex(id);
+		ref readonly var c = ref World.Registry.GetSlimComponent<T>();
+		return c.IsTag ? GetComponentIndex(c.Id) : GetAnyIndex(c.Id);
 	}
 
 	internal ref ArchetypeChunk Add(EntityView ent, out int row)
@@ -288,9 +295,9 @@ public sealed class Archetype : IComparable<Archetype>
 	internal EcsID Remove(ref EcsRecord record)
 		=> RemoveByRow(ref record.Chunk, record.Row);
 
-	internal Archetype InsertVertex(Archetype left, ComponentInfo[] sign, EcsID id)
+	internal Archetype InsertVertex(Archetype left, SlimComponent[] sign, EcsID id, ulong generation)
 	{
-		var vertex = new Archetype(left.World, sign, _comparer);
+		var vertex = new Archetype(left.World, sign, _comparer, generation);
 		var a = left.All.Length < vertex.All.Length ? left : vertex;
 		var b = left.All.Length < vertex.All.Length ? vertex : left;
 		MakeEdges(a, b, id);
@@ -313,7 +320,7 @@ public sealed class Archetype : IComparable<Archetype>
 		var items = Components;
 		var newItems = newArch.Components;
 		for (; x < count; ++x, ++y) {
-			while (items[i].ID != newItems[j].ID) {
+			while (items[i].Id != newItems[j].Id) {
 				// advance the sign with less components!
 				++y;
 			}
@@ -343,14 +350,14 @@ public sealed class Archetype : IComparable<Archetype>
 			Array.Resize(ref _chunks, half);
 	}
 
-	internal void RemoveEmptyArchetypes(ref int removed, Dictionary<EcsID, Archetype> cache)
+	internal void RemoveEmptyArchetypes(ref int removed, ArchetypeRegistry archetypes)
 	{
 		for (var i = _add.Count - 1; i >= 0; --i) {
 			var edge = _add[i];
-			edge.Archetype.RemoveEmptyArchetypes(ref removed, cache);
+			edge.Archetype.RemoveEmptyArchetypes(ref removed, archetypes);
 
 			if (edge.Archetype.Count == 0 && edge.Archetype._add.Count == 0) {
-				cache.Remove(edge.Archetype.Id);
+				archetypes.Remove(edge.Archetype);
 				_remove.Clear();
 				_add.RemoveAt(i);
 
@@ -394,17 +401,17 @@ public sealed class Archetype : IComparable<Archetype>
 
 		var i = 0;
 		var newNodeTypeLen = newNode.All.Length;
-		for (; i < newNodeTypeLen && All[i].ID == newNode.All[i].ID; ++i) { }
+		for (; i < newNodeTypeLen && All[i].Id == newNode.All[i].Id; ++i) { }
 
-		MakeEdges(newNode, this, All[i].ID);
+		MakeEdges(newNode, this, All[i].Id);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool IsSuperset(ReadOnlySpan<ComponentInfo> other)
+	private bool IsSuperset(ReadOnlySpan<SlimComponent> other)
 	{
 		int i = 0, j = 0;
 		while (i < All.Length && j < other.Length) {
-			if (All[i].ID == other[j].ID) {
+			if (All[i].Id == other[j].Id) {
 				j++;
 			}
 
@@ -461,12 +468,26 @@ public sealed class Archetype : IComparable<Archetype>
 
 	public void Print(int depth)
 	{
-		Console.WriteLine(new string(' ', depth * 2) + $"Node: [{string.Join(", ", All.Select(s => s.ID))}]");
+		Console.WriteLine(new string(' ', depth * 2) + $"Node: [{string.Join(", ", All.Select(s => s.Id))}]");
 
 		foreach (ref var edge in CollectionsMarshal.AsSpan(_add)) {
 			Console.WriteLine(new string(' ', (depth + 1) * 2) + $"Edge: {edge.Id}");
 			edge.Archetype.Print(depth + 2);
 		}
+	}
+
+
+}
+
+public class ArchetypeGenerationComparer : IComparer<Archetype>
+{
+
+	public int Compare(Archetype? x, Archetype? y)
+	{
+		if (ReferenceEquals(x, y)) return 0;
+		if (y is null) return 1;
+		if (x is null) return -1;
+		return x.Generation.CompareTo(y.Generation);
 	}
 }
 

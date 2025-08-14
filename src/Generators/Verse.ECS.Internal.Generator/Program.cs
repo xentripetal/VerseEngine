@@ -165,7 +165,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var generics = GenerateSequence(i + 1, ", ", j => $"T{j}");
 				var whereGenerics = GenerateSequence(i + 1, " ", j => $"where T{j} : struct");
-				var objsArgs = GenerateSequence(i + 1, ", ", j => $"Component<T{j}>()");
+				var objsArgs = GenerateSequence(i + 1, ", ", j => $"GetComponent<T{j}>()");
 
 				sb.AppendLine($@"
 					/// <inheritdoc cref=""World.Archetype(Span{{EcsID}})""/>
@@ -329,7 +329,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 						{objsUnlock}
 						return true;
 					}};
-					var sys = new FuncSystem<World>(_world, fn, checkInuse, stage, threadingType.Value);
+					var sys = new FuncSystem<World>(World, fn, checkInuse, stage, threadingType.Value);
 					Add(sys, stage);
 					return sys;
 				}}
@@ -405,7 +405,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 						{objsUnlock}
 						return true;
 					}};
-					var sys = new FuncSystem<World>(_world, fn, checkInuse, Stages.OnEnter, threadingType.Value)
+					var sys = new FuncSystem<World>(World, fn, checkInuse, Stages.OnEnter, threadingType.Value)
 						.RunIf((State<TState> state) => state.ShouldEnter(st, ref stateChangeId));
 					Add(sys, Stages.OnEnter);
 					return sys;
@@ -436,7 +436,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 						{objsUnlock}
 						return true;
 					}};
-					var sys = new FuncSystem<World>(_world, fn, checkInuse, Stages.OnExit, threadingType.Value)
+					var sys = new FuncSystem<World>(World, fn, checkInuse, Stages.OnExit, threadingType.Value)
 						.RunIf((State<TState> state) => state.ShouldExit(st, ref stateChangeId));
 					Add(sys, Stages.OnExit);
 					return sys;
@@ -520,7 +520,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 							{objsUnlock}
 							return true;
 						}};
-						var sys = new FuncSystem<World>(_world, fn, checkInuse, Stages.{stageName}, threadingType.Value);
+						var sys = new FuncSystem<World>(World, fn, checkInuse, Stages.{stageName}, threadingType.Value);
 						Add(sys, Stages.{stageName});
 						return sys;
 					}}");
@@ -535,7 +535,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 					if (!threadingType.HasValue)
 						threadingType = ThreadingExecutionMode;
 
-					var sys = new FuncSystem<World>(_world, (ticks, args, runIf) =>
+					var sys = new FuncSystem<World>(World, (ticks, args, runIf) =>
 					{{
 						if (runIf?.Invoke(ticks, args) ?? true)
 						{{

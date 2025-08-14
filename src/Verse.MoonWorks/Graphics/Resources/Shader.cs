@@ -80,11 +80,11 @@ public class Shader : SDLGPUResource
 			var cleanProps = false;
 			if (shaderCreateInfo.Name != null) {
 				if (createInfo.Props == 0) {
-					createInfo.Props = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
+					createInfo.Props = SDL3.SDL.SDL_CreateProperties();
 					cleanProps = true;
 				}
 
-				lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(createInfo.Props, lib.SDL3_CS.SDL3.SDL.SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, shaderCreateInfo.Name);
+				SDL3.SDL.SDL_SetStringProperty(createInfo.Props, SDL3.SDL.SDL_PROP_GPU_SHADER_CREATE_NAME_STRING, shaderCreateInfo.Name);
 			}
 
 			var shaderModule = SDL.SDL_CreateGPUShader(
@@ -96,7 +96,7 @@ public class Shader : SDLGPUResource
 
 			if (shaderModule == nint.Zero) {
 				Logger.LogError("Failed to compile shader!");
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 				return null;
 			}
 
@@ -109,7 +109,7 @@ public class Shader : SDLGPUResource
 			};
 
 			if (cleanProps) {
-				lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(createInfo.Props);
+				SDL3.SDL.SDL_DestroyProperties(createInfo.Props);
 			}
 
 			return shader;
@@ -159,7 +159,7 @@ public class Shader : SDLGPUResource
 
 			if (shaderModule == nint.Zero) {
 				Logger.LogError("Failed to compile shader!");
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 				return null;
 			}
 
@@ -196,7 +196,7 @@ public class Shader : SDLGPUResource
 				Name = name ?? "Shader"
 			};
 
-			lib.SDL3_CS.SDL3.SDL.SDL_free((nint)metadata);
+			SDL3.SDL.SDL_free((nint)metadata);
 
 			return shader;
 		}
@@ -270,7 +270,7 @@ public class Shader : SDLGPUResource
 				0
 			);
 
-			lib.SDL3_CS.SDL3.SDL.SDL_free(spirvBytecode);
+			SDL3.SDL.SDL_free(spirvBytecode);
 			NativeMemory.Free(entryPointBuffer);
 			NativeMemory.Free(includeDirBuffer);
 			for (var i = 0; i < defines.Length; i += 1) {
@@ -282,7 +282,7 @@ public class Shader : SDLGPUResource
 
 			if (shaderModule == nint.Zero) {
 				Logger.LogError("Failed to compile shader!");
-				Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+				Logger.LogError(SDL3.SDL.SDL_GetError());
 				return null;
 			}
 
@@ -319,7 +319,7 @@ public class Shader : SDLGPUResource
 				Name = name ?? "Shader"
 			};
 
-			lib.SDL3_CS.SDL3.SDL.SDL_free((nint)metadata);
+			SDL3.SDL.SDL_free((nint)metadata);
 
 			return shader;
 		}

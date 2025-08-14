@@ -28,4 +28,59 @@
 
     <Import Project=".\CopyLibs.targets"/>
 
+    <ItemGroup>
+        <!-- Embedded SPIR-V shaders  -->
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\fullscreen.vert.spv">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.Fullscreen.vert.spv</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\video_yuv2rgba.frag.spv">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.VideoYUV2RGBA.frag.spv</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_transform.vert.spv">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextTransform.vert.spv</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_msdf.frag.spv">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextMSDF.frag.spv</LogicalName>
+        </EmbeddedResource>
+        <!-- Embedded MSL shaders -->
+        <EmbeddedResource Include="Graphics\StockShaders\TranslatedSource\fullscreen.vert.msl">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.Fullscreen.vert.msl</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\TranslatedSource\video_yuv2rgba.frag.msl">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.VideoYUV2RGBA.frag.msl</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\TranslatedSource\text_transform.vert.msl">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextTransform.vert.msl</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\TranslatedSource\text_msdf.frag.msl">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextMSDF.frag.msl</LogicalName>
+        </EmbeddedResource>
+        <!-- Embedded DXBC shaders -->
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\fullscreen.vert.dxbc">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.Fullscreen.vert.dxbc</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\video_yuv2rgba.frag.dxbc">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.VideoYUV2RGBA.frag.dxbc</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_transform.vert.dxbc">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextTransform.vert.dxbc</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_msdf.frag.dxbc">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextMSDF.frag.dxbc</LogicalName>
+        </EmbeddedResource>
+        <!-- Embedded DXIL shaders -->
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\fullscreen.vert.dxil">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.Fullscreen.vert.dxil</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\video_yuv2rgba.frag.dxil">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.VideoYUV2RGBA.frag.dxil</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_transform.vert.dxil">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextTransform.vert.dxil</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Graphics\StockShaders\Binary\text_msdf.frag.dxil">
+            <LogicalName>Verse.MoonWorks.Graphics.StockShaders.TextMSDF.frag.dxil</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
 </Project>

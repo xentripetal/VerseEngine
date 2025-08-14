@@ -107,7 +107,7 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	/// <inheritdoc cref="World.GetType" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ReadOnlySpan<ComponentInfo> Type()
+	public readonly ReadOnlySpan<SlimComponent> Type()
 		=> World.GetType(ID);
 
 	/// <inheritdoc cref="World.Get{T}(EcsID)" />

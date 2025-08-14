@@ -40,35 +40,35 @@ public class GraphicsDevice : IDisposable
 			throw new Exception("Need at least one shader format!");
 		}
 
-		var properties = lib.SDL3_CS.SDL3.SDL.SDL_CreateProperties();
-		lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.debugmode", debugMode);
-		lib.SDL3_CS.SDL3.SDL.SDL_SetStringProperty(properties, "SDL.gpu.device.create.name", backendName);
+		var properties = SDL3.SDL.SDL_CreateProperties();
+		SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.debugmode", debugMode);
+		SDL3.SDL.SDL_SetStringProperty(properties, "SDL.gpu.device.create.name", backendName);
 
 		if ((shaderFormats & ShaderFormat.Private) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.private", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.private", true);
 		}
 		if ((shaderFormats & ShaderFormat.SPIRV) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.spirv", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.spirv", true);
 		}
 		if ((shaderFormats & ShaderFormat.DXBC) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.dxbc", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.dxbc", true);
 		}
 		if ((shaderFormats & ShaderFormat.DXIL) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.dxil", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.dxil", true);
 		}
 		if ((shaderFormats & ShaderFormat.MSL) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.msl", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.msl", true);
 		}
 		if ((shaderFormats & ShaderFormat.MetalLib) != 0) {
-			lib.SDL3_CS.SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.metallib", true);
+			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.metallib", true);
 		}
 
 		Handle = SDL.SDL_CreateGPUDeviceWithProperties(properties);
 
-		lib.SDL3_CS.SDL3.SDL.SDL_DestroyProperties(properties);
+		SDL3.SDL.SDL_DestroyProperties(properties);
 
 		if (Handle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			throw new InvalidOperationException("Failed to create graphics device!");
 		}
 
@@ -280,7 +280,7 @@ public class GraphicsDevice : IDisposable
 				window.SwapchainTexture = new Texture(this, window.SwapchainFormat);
 			}
 		} else {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 		}
 
 		return result;
@@ -358,7 +358,7 @@ public class GraphicsDevice : IDisposable
 	{
 		var result = SDL.SDL_SetGPUAllowedFramesInFlight(Handle, allowedFramesInFlight);
 		if (!result) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 		}
 		return result;
 	}
@@ -372,7 +372,7 @@ public class GraphicsDevice : IDisposable
 	{
 		var commandBufferHandle = SDL.SDL_AcquireGPUCommandBuffer(Handle);
 		if (commandBufferHandle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
@@ -389,7 +389,7 @@ public class GraphicsDevice : IDisposable
 		bool result = SDL.SDL_SubmitGPUCommandBuffer(commandBuffer.Handle);
 		if (!result) {
 			// submit errors are not recoverable so let's just fail hard
-			throw new InvalidOperationException(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			throw new InvalidOperationException(SDL3.SDL.SDL_GetError());
 		}
 
 		CommandBufferPool.Return(commandBuffer);
@@ -405,7 +405,7 @@ public class GraphicsDevice : IDisposable
 
 		if (fenceHandle == IntPtr.Zero) {
 			// submit errors are not recoverable so let's just fail hard
-			throw new InvalidOperationException(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			throw new InvalidOperationException(SDL3.SDL.SDL_GetError());
 		}
 
 		var fence = FencePool.Obtain();
@@ -423,7 +423,7 @@ public class GraphicsDevice : IDisposable
 		bool result = SDL.SDL_CancelGPUCommandBuffer(commandBuffer.Handle);
 		if (!result) {
 			// command buffer errors are not recoverable so let's just fail hard
-			throw new InvalidOperationException(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			throw new InvalidOperationException(SDL3.SDL.SDL_GetError());
 		}
 
 		CommandBufferPool.Return(commandBuffer);
@@ -435,7 +435,7 @@ public class GraphicsDevice : IDisposable
 	public void Wait()
 	{
 		if (!SDL.SDL_WaitForGPUIdle(Handle)) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 		}
 	}
 
@@ -446,7 +446,7 @@ public class GraphicsDevice : IDisposable
 	public void WaitForSwapchain(Window window)
 	{
 		if (!SDL.SDL_WaitForGPUSwapchain(Handle, window.Handle)) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 		}
 	}
 
@@ -542,7 +542,7 @@ public class GraphicsDevice : IDisposable
 		}
 
 		var createInfoWithFormat = createInfo with { Format = shaderFormat };
-		var path = $"MoonWorks.Graphics.StockShaders.{name}.{extension}";
+		var path = $"Verse.MoonWorks.Graphics.StockShaders.{name}.{extension}";
 		var assembly = typeof(GraphicsDevice).Assembly;
 		using var stream = assembly.GetManifestResourceStream(path);
 

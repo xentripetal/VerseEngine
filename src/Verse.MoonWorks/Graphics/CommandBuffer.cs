@@ -48,7 +48,7 @@ public class CommandBuffer
 			    out var height
 		    )) {
 			// FIXME: should we throw?
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
@@ -83,7 +83,7 @@ public class CommandBuffer
 			    out var height
 		    )) {
 			// FIXME: should we throw?
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
@@ -220,7 +220,7 @@ public class CommandBuffer
 		);
 
 		if (renderPassHandle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 
@@ -251,7 +251,7 @@ public class CommandBuffer
 		);
 
 		if (renderPassHandle == IntPtr.Zero) {
-			Logger.LogError(lib.SDL3_CS.SDL3.SDL.SDL_GetError());
+			Logger.LogError(SDL3.SDL.SDL_GetError());
 			return null;
 		}
 

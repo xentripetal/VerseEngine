@@ -41,13 +41,13 @@ public sealed partial class World
 
 	internal void AddDeferred<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.SetComponent,
 			Entity = entity,
 			Data = null!,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -55,13 +55,13 @@ public sealed partial class World
 
 	internal ref T SetDeferred<T>(EcsID entity, T component) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.SetComponent,
 			Entity = entity,
 			Data = component,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -71,13 +71,13 @@ public sealed partial class World
 
 	internal object? SetDeferred(EcsID entity, EcsID id, object? rawCmp, int size)
 	{
-		var cmp = new ComponentInfo(id, size);
+		var cmp = new SlimComponent(id, size);
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.SetComponent,
 			Entity = entity,
 			Data = rawCmp,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -86,12 +86,12 @@ public sealed partial class World
 
 	internal void SetChangedDeferred<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.SetChanged,
 			Entity = entity,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -99,12 +99,12 @@ public sealed partial class World
 
 	internal void SetChangedDeferred(EcsID entity, EcsID id)
 	{
-		var cmp = new ComponentInfo(id, -1);
+		var cmp = new SlimComponent(id, -1);
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.SetChanged,
 			Entity = entity,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -112,12 +112,12 @@ public sealed partial class World
 
 	internal void UnsetDeferred<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref Component<T>();
+		ref readonly var cmp = ref GetComponent<T>();
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.UnsetComponent,
 			Entity = entity,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -125,12 +125,12 @@ public sealed partial class World
 
 	internal void UnsetDeferred(EcsID entity, EcsID id)
 	{
-		var cmp = new ComponentInfo(id, 0);
+		var cmp = new SlimComponent(id, 0);
 
 		var cmd = new DeferredOp {
 			Op = DeferredOpTypes.UnsetComponent,
 			Entity = entity,
-			ComponentInfo = cmp
+			SlimComponent = cmp
 		};
 
 		_operations.Enqueue(cmd);
@@ -158,7 +158,7 @@ public sealed partial class World
 
 				case DeferredOpTypes.SetComponent:
 					{
-					var (array, row) = Attach(op.Entity, op.ComponentInfo.ID, op.ComponentInfo.Size);
+					var (array, row) = Attach(op.Entity, in op.SlimComponent);
 					array?.SetValue(op.Data, row & ECS.Archetype.CHUNK_THRESHOLD);
 
 					break;
@@ -166,14 +166,14 @@ public sealed partial class World
 
 				case DeferredOpTypes.UnsetComponent:
 					{
-					Detach(op.Entity, op.ComponentInfo.ID);
+					Detach(op.Entity, op.SlimComponent.Id);
 
 					break;
 					}
 				case DeferredOpTypes.SetChanged:
 					{
-					if (Exists(op.Entity) && Has(op.Entity, op.ComponentInfo.ID))
-						SetChanged(op.Entity, op.ComponentInfo.ID);
+					if (Exists(op.Entity) && Has(op.Entity, op.SlimComponent.Id))
+						SetChanged(op.Entity, op.SlimComponent.Id);
 					break;
 					}
 			}
@@ -196,7 +196,7 @@ public sealed partial class World
 	{
 		public DeferredOpTypes Op;
 		public EcsID Entity;
-		public ComponentInfo ComponentInfo;
+		public SlimComponent SlimComponent;
 		public object? Data;
 	}
 
