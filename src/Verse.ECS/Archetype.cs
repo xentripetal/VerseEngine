@@ -146,6 +146,7 @@ public sealed class Archetype : IComparable<Archetype>
 	private readonly int[] _fastLookup;
 
 
+
 	public readonly SlimComponent[] All, Components, Tags, Pairs = Array.Empty<SlimComponent>();
 	private ArchetypeChunk[] _chunks;
 
@@ -202,6 +203,11 @@ public sealed class Archetype : IComparable<Archetype>
 	public ulong Generation { get; }
 	internal ReadOnlySpan<ArchetypeChunk> Chunks => _chunks.AsSpan(0, Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
 	internal int EmptyChunks => _chunks.Length - (Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
+	
+	public override string ToString()
+	{
+		return $"Archetype(Generation: {Generation}, HashId: {HashId}, Count: {Count}, Components: [{string.Join(", ", Components.Select(c => World.Registry.GetComponent(c.Id).Name))}], Tags: [{string.Join(", ", Tags.Select(c => World.Registry.GetComponent(c.Id).Name))}])";
+	}
 
 	public int CompareTo(Archetype? other) => HashId.CompareTo(other?.HashId);
 

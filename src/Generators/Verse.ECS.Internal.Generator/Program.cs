@@ -16,11 +16,12 @@ public sealed class MyGenerator : IIncrementalGenerator
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		context.RegisterPostInitializationOutput(postContext => {
-			postContext.AddSource("Verse.ECS.Systems.Scheduler.g.cs", CodeFormatter.Format(GenerateSchedulerSystems()));
-			postContext.AddSource("Verse.ECS.Systems.StateHandlers.g.cs", CodeFormatter.Format(GenerateSchedulerSystemsState()));
-			postContext.AddSource("Verse.ECS.Systems.StageSpecific.g.cs", CodeFormatter.Format(GenerateSchedulerStageSpecificSystems()));
-			postContext.AddSource("Verse.ECS.Systems.Interfaces.g.cs", CodeFormatter.Format(GenerateSystemsInterfaces()));
+			//postContext.AddSource("Verse.ECS.Systems.Scheduler.g.cs", CodeFormatter.Format(GenerateSchedulerSystems()));
+			//postContext.AddSource("Verse.ECS.Systems.StateHandlers.g.cs", CodeFormatter.Format(GenerateSchedulerSystemsState()));
+			//postContext.AddSource("Verse.ECS.Systems.StageSpecific.g.cs", CodeFormatter.Format(GenerateSchedulerStageSpecificSystems()));
+			//postContext.AddSource("Verse.ECS.Systems.Interfaces.g.cs", CodeFormatter.Format(GenerateSystemsInterfaces()));
 			postContext.AddSource("Verse.ECS.Systems.DataAndFilter.g.cs", CodeFormatter.Format(CreateDataAndFilterStructs()));
+			postContext.AddSource("Verse.ECS.Systems.FuncSystem.g.cs", CodeFormatter.Format(GenerateFuncSystems()));
 
 			postContext.AddSource("Verse.ECS.Archetypes.g.cs", CodeFormatter.Format(GenerateArchetypes()));
 			postContext.AddSource("Verse.ECS.QueryIteratorEach.g.cs", CodeFormatter.Format(GenerateQueryIteratorEach()));
@@ -583,7 +584,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
-				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam<TArg>, IIntoSystemParam<TArg>");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IIntoSystemParam");
 				var objs = GenerateSequence(i + 1, "\n", j => $"T{j}? obj{j} = null;");
 				var objsGen = GenerateSequence(i + 1, "\n", j => $"obj{j} ??= (T{j})T{j}.Generate(args);");
 				var objsLock = GenerateSequence(i + 1, "\n", j => $"obj{j}.Lock(ticks);");
@@ -606,6 +607,51 @@ public sealed class MyGenerator : IIncrementalGenerator
 				");
 			}
 
+			sb.AppendLine("}");
+
+			return sb.ToString();
+		}
+
+		static string GenerateFuncSystems()
+		{
+			var sb = new StringBuilder();
+
+			sb.AppendLine("using Verse.ECS;");
+			sb.AppendLine("using Verse.ECS.Systems;");
+
+
+			for (var i = 0; i < MAX_GENERICS; ++i) {
+				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IIntoSystemParam<T{j}>");
+				var paramArgs = GenerateSequence(i + 1, "\n\t", j => $"private T{j} _p{j} = default;");
+				var paramArgsGen = GenerateSequence(i + 1, "\n\t\t", j => $"_p{j} = T{j}.Generate(world);");
+				var paramArgsList = GenerateSequence(i + 1, ", ", j => $"_p{j}");
+
+				sb.AppendLine($@"
+public sealed partial class FuncSystem<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null, Action<World, ISystem>? OnInit = null) : BaseFuncSystem(name, set, OnInit)
+	{genericsArgsWhere} {{
+
+	{paramArgs}
+
+	public override void Initialize(World world) {{
+		{paramArgsGen}
+		SetParams({paramArgsList});
+		base.Initialize(world);
+	}}
+
+	public override void Run(World world) {{
+		fn({paramArgsList});
+	}}
+}}
+");
+			}
+
+			sb.AppendLine("public partial class FuncSystem {");
+			for (var i = 0; i < MAX_GENERICS; ++i) {
+				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IIntoSystemParam<T{j}>");
+				sb.AppendLine($@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set);");
+			}
 			sb.AppendLine("}");
 
 			return sb.ToString();

@@ -22,6 +22,8 @@ public sealed partial class World : IDisposable
 	internal NamingEntityMapper NamingEntityMapper { get; }
 
 	public uint Update() => ++_ticks;
+	
+	public ulong CurTick => _ticks;
 
 	internal ref EcsRecord NewId(out EcsID newId, ulong id = 0)
 	{

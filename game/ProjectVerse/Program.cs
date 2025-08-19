@@ -1,30 +1,23 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using Microsoft.Extensions.Logging;
 using ProjectVerse;
 using Verse.ECS;
-using Verse.MoonWorks;
-using Verse.MoonWorks.Graphics;
+using Verse.ECS.Scheduling;
+using Verse.ECS.Scheduling.Executor;
 
+var app = new App();
 var world = new World();
 
-world.Archetypes.OnArchetypeCreated += (world1, archetype) => {
-	Console.WriteLine($"arch created {archetype.Generation} - {archetype.HashId}");
-};
 
-var entityA = world.Entity().Set(1);//.Set(new List<int>());
-var entityb = world.Entity().Set(true).Set(2);
-
-var scheduler = new Scheduler(world);
-
-
-var a = scheduler.AddSystem((
-	Commands commands,
-	Query<Data<int>> q
-) => {
-	foreach (var (a, b) in q) {
-		Console.WriteLine($"Data: {a.Ref.ID}, {b.Ref}");
-	}
+var factory = LoggerFactory.Create(builder => {
+	builder.AddConsole();
 });
 
-scheduler.RunOnce();
-
+var entityA = world.Entity().Set((int) 1);//.Set(new List<int>());
+var entityb = world.Entity().Set(true).Set(2);
+var schedules = new Schedule("main", new SimpleExecutor(new Logger<SimpleExecutor>(factory)));
+var dummy = new RunSystems();
+schedules.AddSystems(dummy);
+schedules.Run(world);
+schedules.Run(world);

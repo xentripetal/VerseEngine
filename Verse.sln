@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Generators", "Generators", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Verse.ECS.Internal.Generator", "src\Generators\Verse.ECS.Internal.Generator\Verse.ECS.Internal.Generator.csproj", "{DE835011-F781-492D-9C70-06202FBE4422}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Verse.ECS.Systems", "src\Verse.ECS.Systems\Verse.ECS.Systems.csproj", "{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Verse.ECS.Generator", "src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj", "{28D347CE-EB1F-4383-A0EC-18F1BF095F1A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,14 +72,15 @@ Global
 		{DE835011-F781-492D-9C70-06202FBE4422}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DE835011-F781-492D-9C70-06202FBE4422}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DE835011-F781-492D-9C70-06202FBE4422}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C243EDA5-9C83-41ED-BE5B-BF1924F78FE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28D347CE-EB1F-4383-A0EC-18F1BF095F1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28D347CE-EB1F-4383-A0EC-18F1BF095F1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28D347CE-EB1F-4383-A0EC-18F1BF095F1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28D347CE-EB1F-4383-A0EC-18F1BF095F1A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B2EF556F-6AF6-4B4B-957F-91AEE35429CD} = {89704874-E0AF-47C8-8DAD-EC96042281FC}
 		{F80E4BA4-71E8-4768-942B-5975411C11BA} = {89704874-E0AF-47C8-8DAD-EC96042281FC}
 		{DE835011-F781-492D-9C70-06202FBE4422} = {3B1DBCF3-35E0-4941-912A-CF38A1B962C0}
+		{28D347CE-EB1F-4383-A0EC-18F1BF095F1A} = {3B1DBCF3-35E0-4941-912A-CF38A1B962C0}
 	EndGlobalSection
 EndGlobal

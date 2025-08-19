@@ -114,7 +114,7 @@ public class Component<T> : Component
 	}
 
 	public static int StaticSize = GetSize();
-	public static string StaticName = nameof(T);
+	public static string StaticName = typeof(T).FullName ?? typeof(T).Name;
 
 	public static Array? CreateArray(int count)
 	{

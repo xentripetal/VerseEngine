@@ -12,8 +12,8 @@ public sealed class QueryBuilder
 
 	public World World { get; }
 
-	public QueryBuilder With<T>() where T : struct
-		=> With(World.GetComponent<T>().Id);
+	public QueryBuilder With<T>() where T : struct => With(World.GetComponent<T>().Id);
+
 
 	public QueryBuilder With(EcsID id)
 		=> Term(new WithTerm(id));

@@ -1,0 +1,3 @@
+- [ ] Add State
+- [ ] Flesh out Res behavior
+- [ ] SubApps

@@ -1,0 +1,60 @@
+using Verse.ECS.Scheduling.Configs;
+
+namespace Verse.ECS.Systems;
+
+public interface ISchedulable
+{
+	/// <summary>
+	/// Schedule any systems in this object onto the app
+	/// </summary>
+	/// <param name="app">App to schedule on</param>
+	/// <returns>Scheduled app</returns>
+	public App Schedule(App app);
+}
+
+public abstract class SystemsContainer : IIntoSystemConfigs, IIntoSystemSet
+{
+	public abstract ISystemSet IntoSystemSet();
+	public abstract NodeConfigs<ISystem> IntoConfigs();
+	// Re-export all the interface methods from IIntoSystemConfigs to make it easier to chain them
+
+
+	public IIntoNodeConfigs<ISystem> InSet(IIntoSystemSet set) => IntoConfigs().InSet(set);
+
+	public IIntoNodeConfigs<ISystem> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => IntoConfigs().InSet(set);
+
+	public IIntoNodeConfigs<ISystem> Before(IIntoSystemSet set) => IntoConfigs().Before(set);
+
+	public IIntoNodeConfigs<ISystem> After(IIntoSystemSet set) => IntoConfigs().After(set);
+
+	public IIntoNodeConfigs<ISystem> BeforeIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().BeforeIgnoreDeferred(set);
+
+	public IIntoNodeConfigs<ISystem> AfterIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().AfterIgnoreDeferred(set);
+
+	public IIntoNodeConfigs<ISystem> Chained() => IntoConfigs().Chained();
+
+	public IIntoNodeConfigs<ISystem> ChainedIgnoreDeferred() => IntoConfigs().ChainedIgnoreDeferred();
+
+	public IIntoNodeConfigs<ISystem> RunIf(ICondition condition) => IntoConfigs().RunIf(condition);
+
+	public IIntoNodeConfigs<ISystem> DistributiveRunIf(ICondition condition) => IntoConfigs().DistributiveRunIf(condition);
+
+	public IIntoNodeConfigs<ISystem> AmbiguousWith(IIntoSystemSet set) => IntoConfigs().AmbiguousWith(set);
+
+	public IIntoNodeConfigs<ISystem> AmbiguousWithAll() => IntoConfigs().AmbiguousWithAll();
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public struct SharedSystemComponent<T> where T : SystemsContainer
+{
+	public T Container;
+	public static void RegisterWrite(World world, ISystem system)
+	{
+		var c = world.GetComponent<SharedSystemComponent<T>>();
+		// TODO Do we track the slim id or the ecsid?
+		system.Meta.Access.AddUnfilteredWrite(c.Id);
+	}
+}

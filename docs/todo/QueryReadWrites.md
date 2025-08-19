@@ -1,0 +1,1 @@
+Currently queries are set to always access terms as a write. We need the ability to express read only terms.

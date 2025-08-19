@@ -1,0 +1,105 @@
+using Microsoft.Extensions.Logging;
+using Verse.ECS.Systems;
+
+namespace Verse.ECS.Scheduling.Executor;
+
+public class SimpleExecutor : IExecutor
+{
+    public SimpleExecutor(ILogger<SimpleExecutor> logger)
+    {
+        Log = logger;
+    }
+    
+    private ILogger<SimpleExecutor> Log;
+    /// <summary>
+    ///     Systems that have run or been skipped
+    /// </summary>
+    protected FixedBitSet CompletedSystems;
+    /// <summary>
+    ///     System sets whose conditions have been evaluated
+    /// </summary>
+    protected FixedBitSet EvaluatedSets;
+
+    public void Init(SystemSchedule schedule)
+    {
+        EvaluatedSets = new FixedBitSet(schedule.SetIds.Count);
+        CompletedSystems = new FixedBitSet(schedule.SystemIds.Count);
+    }
+
+    public void SetApplyFinalDeferred(bool apply)
+    {
+        // do nothing. simple executor does not do a final sync
+    }
+
+    public void Run(SystemSchedule schedule, World world, FixedBitSet? skipSystems, uint tick)
+    {
+        if (skipSystems != null)
+        {
+            CompletedSystems.Or(skipSystems.Value);
+        }
+        for (var systemIndex = 0; systemIndex < schedule.Systems.Count; systemIndex++)
+        {
+            var shouldRun = !CompletedSystems.Contains(systemIndex);
+            foreach (var setIdx in schedule.SetsWithConditionsOfSystems[systemIndex].Ones())
+            {
+                if (EvaluatedSets.Contains(setIdx))
+                {
+                    continue;
+                }
+                // Evaluate system set's conditions
+                var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world);
+
+                // Skip all systems that belong to this set, not just the current one
+                if (!setConditionsMet)
+                {
+                    CompletedSystems.Or(schedule.SystemsInSetsWithConditions[setIdx]);
+                }
+
+                shouldRun &= setConditionsMet;
+                EvaluatedSets.Set(setIdx);
+            }
+
+            // Evaluate System's conditions
+            var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world);
+            shouldRun &= systemConditionsMet;
+
+            CompletedSystems.Set(systemIndex);
+            if (!shouldRun)
+            {
+                continue;
+            }
+
+            var system = schedule.Systems[systemIndex];
+            // Simple executor always applys deferred after a system, so skip inserted deferred systems
+            if (system is ApplyDeferredSystem)
+            {
+                continue;
+            }
+            try
+            {
+                system.TryRun(world, tick);
+            }
+            catch (Exception e)
+            {
+                Log.LogError(e, "Error in system {System}", system.Meta.Name);
+            }
+        }
+        EvaluatedSets.Clear();
+        CompletedSystems.Clear();
+    }
+
+    protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world)
+    {
+        // Not short-circuiting is intentional
+        var met = true;
+        foreach (var condition in conditions)
+        {
+            // TODO refactor conditions
+            if (!condition.Evaluate(world))
+            {
+                met = false;
+            }
+        }
+        return met;
+    }
+}

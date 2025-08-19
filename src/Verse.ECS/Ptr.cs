@@ -24,6 +24,21 @@ public readonly ref struct PtrRO<T> where T : struct
 	public readonly ref readonly T Ref;
 }
 
+public interface ITermAccessor<T> where T : struct
+{
+	
+}
+
+public readonly ref struct R<T> : ITermAccessor<T> where T : struct 
+{
+	
+}
+
+public readonly ref struct W<T> : ITermAccessor<T> where T : struct
+{
+	
+}
+
 [SkipLocalsInit]
 internal ref struct DataRow<T> where T : struct
 {
