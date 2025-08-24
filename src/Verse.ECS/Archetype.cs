@@ -42,13 +42,13 @@ internal readonly struct Column
 internal struct ArchetypeChunk
 {
 	internal readonly Column[]? Columns;
-	internal readonly EntityView[] Entities;
+	internal readonly ROEntityView[] Entities;
 	private readonly World _world;
 
 	internal ArchetypeChunk(World world, ReadOnlySpan<SlimComponent> sign, int chunkSize)
 	{
 		_world = world;
-		Entities = new EntityView[chunkSize];
+		Entities = new ROEntityView[chunkSize];
 		Columns = new Column[sign.Length];
 		for (var i = 0; i < sign.Length; ++i) {
 			Columns[i] = new Column(world, in sign[i], chunkSize);
@@ -59,7 +59,7 @@ internal struct ArchetypeChunk
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ref EntityView EntityAt(int row)
+	public readonly ref ROEntityView EntityAt(int row)
 		=> ref Unsafe.Add(ref Entities.AsSpan(0, Count)[0], row & Archetype.CHUNK_THRESHOLD);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,7 +116,7 @@ internal struct ArchetypeChunk
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ReadOnlySpan<EntityView> GetEntities()
+	public readonly ReadOnlySpan<ROEntityView> GetEntities()
 		=> Entities.AsSpan(0, Count);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -243,7 +243,7 @@ public sealed class Archetype : IComparable<Archetype>
 		return c.IsTag ? GetComponentIndex(c.Id) : GetAnyIndex(c.Id);
 	}
 
-	internal ref ArchetypeChunk Add(EntityView ent, out int row)
+	internal ref ArchetypeChunk Add(ROEntityView ent, out int row)
 	{
 		ref var chunk = ref GetOrCreateChunk(Count);
 		chunk.EntityAt(chunk.Count++) = ent;
@@ -252,7 +252,7 @@ public sealed class Archetype : IComparable<Archetype>
 	}
 
 	internal ref ArchetypeChunk Add(EcsID id, out int newRow)
-		=> ref Add(new EntityView(World, id), out newRow);
+		=> ref Add(new ROEntityView(World, id), out newRow);
 
 	private EcsID RemoveByRow(ref ArchetypeChunk chunk, int row)
 	{
@@ -261,10 +261,10 @@ public sealed class Archetype : IComparable<Archetype>
 
 		// ref var chunk = ref GetChunk(row);
 		ref var lastChunk = ref GetChunk(Count);
-		var removed = chunk.EntityAt(row).ID;
+		var removed = chunk.EntityAt(row).Id;
 
 		if (row < Count) {
-			EcsAssert.Assert(lastChunk.EntityAt(Count).ID.IsValid(), "Entity is invalid. This should never happen!");
+			EcsAssert.Assert(lastChunk.EntityAt(Count).Id.IsValid(), "Entity is invalid. This should never happen!");
 
 			chunk.EntityAt(row) = lastChunk.EntityAt(Count);
 
@@ -274,7 +274,7 @@ public sealed class Archetype : IComparable<Archetype>
 				lastChunk.Columns![i].CopyTo(srcIdx, in chunk.Columns![i], dstIdx);
 			}
 
-			ref var rec = ref World.GetRecord(chunk.EntityAt(row).ID);
+			ref var rec = ref World.GetRecord(chunk.EntityAt(row).Id);
 			rec.Chunk = chunk;
 			rec.Row = row;
 		}

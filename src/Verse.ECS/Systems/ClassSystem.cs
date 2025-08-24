@@ -25,7 +25,7 @@ public interface ICondition : IMetaSystem
 	/// Execute the condition and return the result
 	/// </summary>
 	/// <param name="world"></param>
-	public bool Evaluate(World world);
+	public bool Evaluate(World world, uint tick);
 }
 
 public interface ISystem : IMetaSystem

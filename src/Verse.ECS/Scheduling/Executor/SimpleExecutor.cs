@@ -47,7 +47,7 @@ public class SimpleExecutor : IExecutor
                     continue;
                 }
                 // Evaluate system set's conditions
-                var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world);
+                var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world, tick);
 
                 // Skip all systems that belong to this set, not just the current one
                 if (!setConditionsMet)
@@ -60,7 +60,7 @@ public class SimpleExecutor : IExecutor
             }
 
             // Evaluate System's conditions
-            var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world);
+            var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world, tick);
             shouldRun &= systemConditionsMet;
 
             CompletedSystems.Set(systemIndex);
@@ -88,14 +88,14 @@ public class SimpleExecutor : IExecutor
         CompletedSystems.Clear();
     }
 
-    protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world)
+    protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world, uint tick)
     {
         // Not short-circuiting is intentional
         var met = true;
         foreach (var condition in conditions)
         {
             // TODO refactor conditions
-            if (!condition.Evaluate(world))
+            if (!condition.Evaluate(world, tick))
             {
                 met = false;
             }

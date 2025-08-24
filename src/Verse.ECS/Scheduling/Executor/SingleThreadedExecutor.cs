@@ -49,7 +49,7 @@ public class SingleThreadedExecutor(ILogger<SingleThreadedExecutor> logger) : IE
                     continue;
                 }
                 // Evaluate system set's conditions
-                var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world);
+                var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world, tick);
 
                 // Skip all systems that belong to this set, not just the current one
                 if (!setConditionsMet)
@@ -62,7 +62,7 @@ public class SingleThreadedExecutor(ILogger<SingleThreadedExecutor> logger) : IE
             }
 
             // Evaluate System's conditions
-            var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world);
+            var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world, tick);
             shouldRun &= systemConditionsMet;
 
             CompletedSystems.Set(systemIndex);
@@ -102,13 +102,13 @@ public class SingleThreadedExecutor(ILogger<SingleThreadedExecutor> logger) : IE
         world.BeginDeferred();
     }
 
-    protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world)
+    protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world, uint tick)
     {
         // Not short-circuiting is intentional
         var met = true;
         foreach (var condition in conditions)
         {
-            if (!condition.Evaluate(world))
+            if (!condition.Evaluate(world, tick))
             {
                 met = false;
             }

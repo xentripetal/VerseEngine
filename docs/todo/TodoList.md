@@ -1,4 +1,5 @@
+- [x] Currently queries are set to always access terms as a write. We need the ability to express read only terms.
 - [ ] Add State
 - [ ] Flesh out Res behavior
 - [ ] SubApps
-- [ ] Allow marking components that don't need applydeferred
+- [ ] Allow marking components that don't need apply deferred (Res/Commands)

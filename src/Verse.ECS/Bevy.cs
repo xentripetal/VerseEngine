@@ -346,11 +346,6 @@ internal struct Placeholder<T> where T : ISystemParam
 	public T Value;
 }
 
-public interface IPlugin
-{
-	void Build();
-}
-
 public interface IEventParam
 {
 	void Clear();
@@ -543,7 +538,7 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<Qu
 	public void Init(ISystem system, World world)
 	{
 		_system = system;
-		// TODO
+		_system.Meta.Access.Add(_query.BuildAccess());
 	}
 	public bool Ready(ISystem system, World world) => true;
 }
@@ -623,7 +618,7 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<S
 	public void Init(ISystem system, World world)
 	{
 		this._system = system;
-		// TODO
+		this._system.Meta.Access.Add(_query.BuildAccess());
 	}
 	public bool Ready(ISystem system, World world) => true;
 }
@@ -706,7 +701,9 @@ public class Res<T> : ISystemParam, IIntoSystemParam<Res<T>> where T : notnull
 
 	public static implicit operator T?(Res<T> reference)
 		=> reference.Value;
-	public void Init(ISystem system, World world) { }
+	public void Init(ISystem system, World world)
+	{
+	}
 	public bool Ready(ISystem system, World world) => true;
 }
 
@@ -784,9 +781,12 @@ public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 	public EntityCommand Entity(EcsID id = 0)
 	{
 		var ent = _world.Entity(id);
-		return new EntityCommand(_world, ent.ID);
+		return new EntityCommand(_world, ent.Id);
 	}
-	public void Init(ISystem system, World world) { }
+	public void Init(ISystem system, World world)
+	{
+		system.Meta.HasDeferred = true;
+	}
 	public bool Ready(ISystem system, World world) => true;
 }
 
@@ -873,7 +873,7 @@ public ref struct Empty : IData<Empty>, IFilter<Empty>
 	[UnscopedRef]
 	public ref Empty Current => ref this;
 
-	public readonly void Deconstruct(out ReadOnlySpan<EntityView> entities, out int count)
+	public readonly void Deconstruct(out ReadOnlySpan<ROEntityView> entities, out int count)
 	{
 		entities = _iterator.Entities();
 		count = entities.Length;

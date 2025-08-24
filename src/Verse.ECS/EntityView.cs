@@ -3,17 +3,15 @@ namespace Verse.ECS;
 /// <summary>
 ///     A wrapper around an EcsID which contains shortcuts methods.
 /// </summary>
-#if NET5_0_OR_GREATER
 [SkipLocalsInit]
-#endif
-[DebuggerDisplay("ID: {ID}")]
+[DebuggerDisplay("ID: {Id}")]
 public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, IComparable<EntityView>, IComparable<EcsID>
 {
 	public static readonly EntityView Invalid = new EntityView(null!, 0);
 
 
 	/// <inheritdoc cref="EcsID" />
-	public readonly EcsID ID;
+	public readonly EcsID Id;
 
 	/// <inheritdoc cref="ECS.World" />
 	public readonly World World;
@@ -23,24 +21,24 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 	internal EntityView(World world, EcsID id)
 	{
 		World = world;
-		ID = id;
+		Id = id;
 	}
 
 	/// <inheritdoc cref="EcsID.Generation" />
-	public readonly int Generation => ID.Generation();
+	public readonly int Generation => Id.Generation();
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Equals(EcsID other)
-		=> ID == other;
+		=> Id == other;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Equals(EntityView other)
-		=> ID == other.ID;
+		=> Id == other.Id;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly override int GetHashCode()
-		=> ID.GetHashCode();
+		=> Id.GetHashCode();
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly override bool Equals(object? obj)
@@ -48,18 +46,18 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly int CompareTo(EntityView ent)
-		=> ID.CompareTo(ent.ID);
+		=> Id.CompareTo(ent.Id);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly int CompareTo(EcsID ent)
-		=> ID.CompareTo(ent);
+		=> Id.CompareTo(ent);
 
 
 	/// <inheritdoc cref="World.Add{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Add<T>() where T : struct
 	{
-		World.Add<T>(ID);
+		World.Add<T>(Id);
 		return this;
 	}
 
@@ -67,7 +65,7 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Set<T>(T component) where T : struct
 	{
-		World.Set(ID, component);
+		World.Set(Id, component);
 		return this;
 	}
 
@@ -75,20 +73,20 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Add(EcsID id)
 	{
-		World.Add(ID, id);
+		World.Add(Id, id);
 		return this;
 	}
 
 	/// <inheritdoc cref="World.Add(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Add(EntityView id)
-		=> Add(id.ID);
+		=> Add(id.Id);
 
 	/// <inheritdoc cref="World.Unset{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Unset<T>() where T : struct
 	{
-		World.Unset<T>(ID);
+		World.Unset<T>(Id);
 		return this;
 	}
 
@@ -96,57 +94,64 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Unset(EcsID id)
 	{
-		World.Unset(ID, id);
+		World.Unset(Id, id);
 		return this;
 	}
+	
+	public readonly ROEntityView AsReadOnly() => new ROEntityView(World, Id);
 
 	/// <inheritdoc cref="World.Unset(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly EntityView Unset(EntityView id)
-		=> Unset(id.ID);
+		=> Unset(id.Id);
 
+	/// <inheritdoc cref="World.GetSlimType" />
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public readonly ReadOnlySpan<SlimComponent> SlimType()
+		=> World.GetSlimType(Id);
+	
 	/// <inheritdoc cref="World.GetType" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ReadOnlySpan<SlimComponent> Type()
-		=> World.GetType(ID);
+	public readonly ReadOnlySpan<Component> Type()
+		=> World.GetType(Id);
 
 	/// <inheritdoc cref="World.Get{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly ref T Get<T>() where T : struct
-		=> ref World.Get<T>(ID);
+		=> ref World.Get<T>(Id);
 
 	/// <inheritdoc cref="World.Has{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Has<T>() where T : struct
-		=> World.Has<T>(ID);
+		=> World.Has<T>(Id);
 
 	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Has(EcsID id)
-		=> World.Has(ID, id);
+		=> World.Has(Id, id);
 
 	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Has(EntityView id)
-		=> World.Has(ID, id.ID);
+		=> World.Has(Id, id.Id);
 
 	/// <inheritdoc cref="World.Delete" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly void Delete()
-		=> World.Delete(ID);
+		=> World.Delete(Id);
 
 	/// <inheritdoc cref="World.Exists" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Exists()
-		=> World.Exists(ID);
+		=> World.Exists(Id);
 
 	/// <inheritdoc cref="World.SetChanged" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly void SetChanged<T>() where T : struct
-		=> World.SetChanged<T>(ID);
+		=> World.SetChanged<T>(Id);
 
-	public static implicit operator EcsID(EntityView d) => d.ID;
+	public static implicit operator EcsID(EntityView d) => d.Id;
 
-	public static bool operator ==(EntityView a, EntityView b) => a.ID.Equals(b.ID);
+	public static bool operator ==(EntityView a, EntityView b) => a.Id.Equals(b.Id);
 	public static bool operator !=(EntityView a, EntityView b) => !(a == b);
 }

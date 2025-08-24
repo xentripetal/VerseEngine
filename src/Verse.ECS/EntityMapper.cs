@@ -199,7 +199,7 @@ public static class EntityMapperEx
 
 	public static EntityView AddChild(this EntityView entity, EcsID childId, int index = -1)
 	{
-		entity.World.AddChild(entity.ID, childId, index);
+		entity.World.AddChild(entity.Id, childId, index);
 		return entity;
 	}
 
@@ -211,7 +211,7 @@ public static class EntityMapperEx
 
 
 	public static string Name(this EntityView entity)
-		=> entity.World.Name(entity.ID);
+		=> entity.World.Name(entity.Id);
 }
 
 public interface IParentComponent

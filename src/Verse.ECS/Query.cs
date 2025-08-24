@@ -1,3 +1,5 @@
+using Verse.ECS.Systems;
+
 namespace Verse.ECS;
 
 public sealed class QueryBuilder
@@ -64,14 +66,14 @@ public sealed class Query
 		terms.CopyTo(_terms, 0);
 		Array.Sort(_terms);
 
-		TermsAccess = terms.Where(s => World.Registry.GetSlimComponent(s.Id).Size > 0).ToArray();
+		Terms = terms.Where(s => World.Registry.GetSlimComponent(s.Id).Size > 0).ToArray();
 
-		_indices = new int[TermsAccess.Length];
+		_indices = new int[Terms.Length];
 		_indices.AsSpan().Fill(-1);
 	}
 
 	internal World World { get; }
-	internal IQueryTerm[] TermsAccess { get; }
+	internal IQueryTerm[] Terms { get; }
 
 
 
@@ -116,7 +118,36 @@ public sealed class Query
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, uint tick) => new QueryIterator(archetypes, TermsAccess, _indices, start, count, tick);
+	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, uint tick) => new QueryIterator(archetypes, Terms, _indices, start, count, tick);
+
+	public FilteredAccess BuildAccess()
+	{
+		var filter = new FilteredAccess();
+		foreach (var term in Terms) {
+			switch (term.Op) {
+				case TermOp.With:
+					if (term.Access == TermAccess.Read) {
+						filter.AddRead(term.Id);
+					} else if (term.Access == TermAccess.Write) {
+						filter.AddWrite(term.Id);
+					}
+					break;
+				case TermOp.Without:
+					filter.AndWithout(term.Id);
+					break;
+				case TermOp.Optional:
+					var optionalAccess = new Access();
+					if (term.Access == TermAccess.Read) {
+						optionalAccess.AddRead(term.Id);
+					} else if (term.Access == TermAccess.Write) {
+						optionalAccess.AddWrite(term.Id);
+					}
+					filter.ExtendAccess(optionalAccess);
+					break;
+			}
+		}
+		return filter;
+	}
 }
 
 [SkipLocalsInit]
@@ -254,7 +285,7 @@ public ref struct QueryIterator
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ReadOnlySpan<EntityView> Entities()
+	public readonly ReadOnlySpan<ROEntityView> Entities()
 	{
 		var entities = _chunkIterator.Current.GetEntities();
 
@@ -265,7 +296,7 @@ public ref struct QueryIterator
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ReadOnlyMemory<EntityView> EntitiesAsMemory()
+	public readonly ReadOnlyMemory<ROEntityView> EntitiesAsMemory()
 	{
 		var entities = _chunkIterator.Current.Entities.AsMemory(0, _chunkIterator.Current.Count);
 

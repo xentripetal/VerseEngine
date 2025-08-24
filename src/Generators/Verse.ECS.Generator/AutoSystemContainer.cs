@@ -190,7 +190,7 @@ public SystemEntries Systems {
 		sb.AppendLine("public App Schedule(App app) {");
 		sb.AppendLine($"var t = typeof({ClassName});");
 		foreach (var sys in Systems) {
-			sb.AppendLine($"app = ScheduleAttribute.ScheduleFromMethod(app, Systems.{sys.Name}, t.GetMethod(nameof({sys.Name}))!);");
+			sb.AppendLine($"app = ScheduleAttribute.ScheduleFromMethod(app, Systems.{sys.Name}.InSet(new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All)), t.GetMethod(nameof({sys.Name}))!);");
 		}
 		sb.AppendLine("return app;");
 	}

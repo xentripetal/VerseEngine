@@ -41,7 +41,7 @@ public sealed partial class World : IDisposable
 		ref readonly var lookup = ref Registry.GetSlimComponent<T>();
 		ref var idx = ref _cachedComponents.GetOrCreate(lookup.Id, out var exists);
 		if (!exists) {
-			idx = Entity(lookup.Id).Set(lookup).ID;
+			idx = Entity(lookup.Id).Set(lookup).Id;
 			NamingEntityMapper.SetName(idx, Component<T>.StaticName);
 		}
 

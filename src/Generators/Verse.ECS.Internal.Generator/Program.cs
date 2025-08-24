@@ -87,7 +87,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 					{{
 						private QueryIterator _iterator;
 						private int _index, _count;
-						private ReadOnlySpan<EntityView> _entities;
+						private ReadOnlySpan<ROEntityView> _entities;
 						{ptrList}
 
 						[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,7 +121,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 						}}
 
 						[MethodImpl(MethodImplOptions.AggressiveInlining)]
-						public readonly void Deconstruct(out PtrRO<EntityView> entity, {fieldSign})
+						public readonly void Deconstruct(out PtrRO<ROEntityView> entity, {fieldSign})
 						{{
 							entity = new (in _entities[_index]);
 							{fieldAssignments}

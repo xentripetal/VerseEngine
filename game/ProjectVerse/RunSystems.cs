@@ -40,7 +40,7 @@ public partial class RunSystems : SystemsContainer
 	{
 		Console.WriteLine(b.Value.Value);
 		foreach (var (entity, data) in q) {
-			Console.WriteLine($"Entity {entity.Ref.ID} - {data.Ref}");
+			Console.WriteLine($"Entity {entity.Ref.Id} - {data.Ref}");
 		}
 	}
 }

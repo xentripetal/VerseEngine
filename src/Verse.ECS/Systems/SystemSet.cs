@@ -133,7 +133,7 @@ public class SystemTypeSet<T>() : SystemTypeSet(typeof(T))
 	public new ISystemSet IntoSystemSet() => this;
 }
 
-public class MethodSystemSet<T>(string Method) : ISystemSet 
+public class MethodSystemSet<T>(string Method) : ISystemSet
 {
 	public bool Equals(ISystemSet? other)
 	{
@@ -149,20 +149,17 @@ public class MethodSystemSet<T>(string Method) : ISystemSet
 
 public class EnumSystemSet<T> : ISystemSet where T : struct, Enum
 {
-	public EnumSystemSet(T set, bool isSystemAlias = false)
+	public EnumSystemSet(T set)
 	{
 		Value = set;
-		_isSystemAlias = isSystemAlias;
 	}
 
-	private readonly bool _isSystemAlias;
 	public T Value { get; }
 
 	public bool Equals(ISystemSet? other)
 	{
 		if (other is EnumSystemSet<T> otherEnum) {
-			return Value.Equals(otherEnum.Value) &&
-			       _isSystemAlias == otherEnum._isSystemAlias;
+			return Value.Equals(otherEnum.Value);
 		}
 		return false;
 	}
@@ -171,10 +168,10 @@ public class EnumSystemSet<T> : ISystemSet where T : struct, Enum
 
 	public string GetName() => $"{typeof(T).Name}({Enum.GetName(Value)})";
 
-	public bool IsSystemAlias() => _isSystemAlias;
+	public bool IsSystemAlias() => false;
 	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
 
-	public override int GetHashCode() => HashCode.Combine(Value, _isSystemAlias);
+	public override int GetHashCode() => HashCode.Combine(Value);
 }
 
 /// <summary>

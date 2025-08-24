@@ -246,10 +246,27 @@ public sealed partial class World
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public ReadOnlySpan<SlimComponent> GetType(EcsID id)
+	public ReadOnlySpan<SlimComponent> GetSlimType(EcsID id)
 	{
 		ref var record = ref GetRecord(id);
 		return record.Archetype.All.AsSpan();
+	}
+	
+	/// <summary>
+	///     The archetype sign.<br />The sign is unique.
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	public ReadOnlySpan<Component> GetType(EcsID id)
+	{
+		ref var record = ref GetRecord(id);
+		var slim = record.Archetype.All.AsSpan();
+		var components = new Component[slim.Length];
+		for (int i = 0; i < slim.Length; i++)
+		{
+			components[i] = Registry.GetComponent(slim[i].Id);
+		}
+		return components;
 	}
 
 	/// <summary>
