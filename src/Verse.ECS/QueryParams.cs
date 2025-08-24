@@ -139,7 +139,8 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 			_stateRow.Value = ref Unsafe.AddByteOffset(ref _stateRow.Value, _size);
 		}
 
-		return _size > 0 && _stateRow.Value >= _lastRun && _stateRow.Value < _thisRun;
+		// TODO why did tinyecs filter for < thisRun?
+		return _size > 0 && _stateRow.Value >= _lastRun; //&& _stateRow.Value < _thisRun;
 	}
 
 	public void SetTicks(uint lastRun, uint thisRun)
@@ -215,6 +216,28 @@ public ref struct Added<T> : IFilter<Added<T>>
 		_lastRun = lastRun;
 		_thisRun = thisRun;
 	}
+}
+
+public ref struct Writes<T> : IFilter<Writes<T>>
+	where T : struct
+{
+	[UnscopedRef]
+	ref Writes<T> IQueryIterator<Writes<T>>.Current => ref this;
+
+	public static void Build(QueryBuilder builder)
+	{
+		builder.With<T>(TermAccess.Write);
+	}
+
+	static Writes<T> IFilter<Writes<T>>.CreateIterator(QueryIterator iterator) => new Writes<T>();
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	readonly Writes<T> IQueryIterator<Writes<T>>.GetEnumerator() => this;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	readonly bool IQueryIterator<Writes<T>>.MoveNext() => true;
+
+	public readonly void SetTicks(uint lastRun, uint thisRun) { }
 }
 
 public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>

@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="QuikGraph.Graphviz" Version="2.5.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8"/>
     </ItemGroup>
 

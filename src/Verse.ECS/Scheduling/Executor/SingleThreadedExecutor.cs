@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Verse.ECS.Systems;
 
 namespace Verse.ECS.Scheduling.Executor;
 
-public class SingleThreadedExecutor : IExecutor
+public class SingleThreadedExecutor(ILogger<SingleThreadedExecutor> logger) : IExecutor
 {
     /// <summary>
     ///     Applies deferred system buffers after all systems have ran
@@ -37,6 +38,7 @@ public class SingleThreadedExecutor : IExecutor
             CompletedSystems.Or(skipSystems.Value);
         }
 
+        world.BeginDeferred();
         for (var systemIndex = 0; systemIndex < schedule.Systems.Count; systemIndex++)
         {
             var shouldRun = !CompletedSystems.Contains(systemIndex);
@@ -82,13 +84,13 @@ public class SingleThreadedExecutor : IExecutor
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error in system {system.Meta.Name}: {e.Message}");
+                logger.LogError(e, "Error in system {System}", system.Meta.Name);;
             }
         }
 
         if (ApplyFinalDeferred)
         {
-            ApplyDeferred(schedule, world);
+            world.EndDeferred();
         }
         EvaluatedSets.Clear();
         CompletedSystems.Clear();
@@ -97,6 +99,7 @@ public class SingleThreadedExecutor : IExecutor
     protected void ApplyDeferred(SystemSchedule schedule, World world)
     {
         world.EndDeferred();
+        world.BeginDeferred();
     }
 
     protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world)

@@ -5,8 +5,10 @@ namespace Verse.ECS.Systems;
 /// </summary>
 /// <param name="set"></param>
 /// <param name="OnInit">Optional hook to call when initializing the system. Used for registering custom metadata</param>
-public abstract class BaseFuncSystem(string? name = null, ISystemSet? set = null, Action<World, ISystem>? OnInit = null) : ClassSystem(name, set)
+public abstract class BaseFuncSystem(string? name = null, ISystemSet? set = null, Action<World, ISystem> OnInit = null) : ClassSystem(name, set)
 {
+	private Action<World, ISystem>? OnInit;
+	
 	public override void Initialize(World world)
 	{
 		if (OnInit != null)
@@ -15,9 +17,9 @@ public abstract class BaseFuncSystem(string? name = null, ISystemSet? set = null
 	}
 }
 
-public partial class FuncSystem(Action fn, string? name = null, ISystemSet? set = null) : BaseFuncSystem(name, set)
+public partial class FuncSystem(Action fn, string? name = null) : BaseFuncSystem(name)
 {
 	public override void Run(World world) => fn();
 
-	public static FuncSystem Of(Action fn, string? name = null, ISystemSet? set = null) => new FuncSystem(fn, name, set);
+	public static FuncSystem Of(Action fn, string? name = null) => new FuncSystem(fn, name);
 }

@@ -24,24 +24,15 @@ public interface IQueryTerm : IComparable<IQueryTerm>
 }
 
 [DebuggerDisplay("{Id} - {Op}")]
-public readonly struct WithTerm(EcsID id) : IQueryTerm
+public readonly struct WithTerm(EcsID id, TermAccess Access = TermAccess.Read) : IQueryTerm
 {
 	public ulong Id { get; init; } = id;
 	public TermOp Op { get; init; } = TermOp.With;
-	public TermAccess Access { get; init; } = TermAccess.Write;
+	public TermAccess Access { get; init; } = Access;
 
 	public readonly ArchetypeSearchResult Match(Archetype archetype) => archetype.HasIndex(Id) ? ArchetypeSearchResult.Found : ArchetypeSearchResult.Continue;
 }
 
-[DebuggerDisplay("{Id} - {Op}")]
-public readonly struct WithROTerm(EcsID id) : IQueryTerm
-{
-	public ulong Id { get; init; } = id;
-	public TermOp Op { get; init; } = TermOp.With;
-	public TermAccess Access { get; init; } = TermAccess.Read;
-
-	public readonly ArchetypeSearchResult Match(Archetype archetype) => archetype.HasIndex(Id) ? ArchetypeSearchResult.Found : ArchetypeSearchResult.Continue;
-}
 
 [DebuggerDisplay("{Id} - {Op}")]
 public readonly struct WithoutTerm(EcsID id) : IQueryTerm

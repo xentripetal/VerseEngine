@@ -1,3 +1,4 @@
 - [ ] Add State
 - [ ] Flesh out Res behavior
 - [ ] SubApps
+- [ ] Allow marking components that don't need applydeferred

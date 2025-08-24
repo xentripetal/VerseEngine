@@ -5,7 +5,6 @@ namespace Verse.ECS;
 
 // https://promethia-27.github.io/dependency_injection_like_bevy_from_scratch/introductions.html
 
-
 /**
 public partial class FuncSystem<TArg> where TArg : notnull
 {
@@ -539,7 +538,8 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<Qu
 		=> _query.Count();
 
 	private ISystem _system;
-	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) => new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter() : _query.Iter(id));
+	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
+		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
 	public void Init(ISystem system, World world)
 	{
 		_system = system;
@@ -618,7 +618,8 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<S
 		=> _query.Count();
 
 	private ISystem _system;
-	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) => new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter() : _query.Iter(id));
+	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
+		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
 	public void Init(ISystem system, World world)
 	{
 		this._system = system;
@@ -766,7 +767,6 @@ public sealed class SchedulerState : ISystemParam, IIntoSystemParam<SchedulerSta
 		=> _scheduler.InState(state);
 }
 **/
-
 public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 {
 	private readonly World _world;
@@ -778,9 +778,7 @@ public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 
 	public static Commands Generate(World arg)
 	{
-		if (arg.Entity<Placeholder<Commands>>().Has<Placeholder<Commands>>())
-			return arg.Entity<Placeholder<Commands>>().Get<Placeholder<Commands>>().Value;
-		throw new NotImplementedException();
+		return new Commands(arg);
 	}
 
 	public EntityCommand Entity(EcsID id = 0)
@@ -893,4 +891,3 @@ public ref struct Empty : IData<Empty>, IFilter<Empty>
 
 	static Empty IFilter<Empty>.CreateIterator(QueryIterator iterator) => new Empty(iterator, true);
 }
-

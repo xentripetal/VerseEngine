@@ -15,7 +15,8 @@ public class Schedule
     internal SystemSchedule Executable;
     internal IExecutor Executor;
     protected bool ExecutorInitialized;
-    internal readonly SystemGraph Graph;
+    public readonly SystemGraph Graph;
+    
 
     public Schedule(string name, IExecutor executor)
     {

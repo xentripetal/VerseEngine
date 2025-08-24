@@ -12,11 +12,11 @@ public sealed class QueryBuilder
 
 	public World World { get; }
 
-	public QueryBuilder With<T>() where T : struct => With(World.GetComponent<T>().Id);
+	public QueryBuilder With<T>(TermAccess access = TermAccess.Read) where T : struct => With(World.GetComponent<T>().Id, access);
 
 
-	public QueryBuilder With(EcsID id)
-		=> Term(new WithTerm(id));
+	public QueryBuilder With(EcsID id, TermAccess access = TermAccess.Read)
+		=> Term(new WithTerm(id, access));
 
 	public QueryBuilder Without<T>() where T : struct
 		=> Without(World.GetComponent<T>().Id);
@@ -64,9 +64,7 @@ public sealed class Query
 		terms.CopyTo(_terms, 0);
 		Array.Sort(_terms);
 
-		TermsAccess = terms
-			.Where(s => World.Registry.GetSlimComponent(s.Id).Size > 0)
-			.ToArray();
+		TermsAccess = terms.Where(s => World.Registry.GetSlimComponent(s.Id).Size > 0).ToArray();
 
 		_indices = new int[TermsAccess.Length];
 		_indices.AsSpan().Fill(-1);
@@ -94,14 +92,14 @@ public sealed class Query
 		return _matchedArchetypes.Sum(static s => s.Count);
 	}
 
-	public QueryIterator Iter()
+	public QueryIterator Iter(uint tick)
 	{
 		Match();
 
-		return Iter(CollectionsMarshal.AsSpan(_matchedArchetypes), 0, -1);
+		return Iter(CollectionsMarshal.AsSpan(_matchedArchetypes), 0, -1, tick);
 	}
 
-	public QueryIterator Iter(EcsID entity)
+	public QueryIterator Iter(EcsID entity, uint tick)
 	{
 		Match();
 
@@ -110,15 +108,15 @@ public sealed class Query
 			foreach (var arch in _matchedArchetypes) {
 				if (arch.HashId != record.Archetype.HashId) continue;
 				var archetypes = new ReadOnlySpan<Archetype>(ref record.Archetype);
-				return Iter(archetypes, record.Row, 1);
+				return Iter(archetypes, record.Row, 1, tick);
 			}
 		}
 
-		return Iter([], 0, 0);
+		return Iter([], 0, 0, tick);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count) => new QueryIterator(archetypes, TermsAccess, _indices, start, count);
+	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, uint tick) => new QueryIterator(archetypes, TermsAccess, _indices, start, count, tick);
 }
 
 [SkipLocalsInit]
@@ -129,10 +127,11 @@ public ref struct QueryIterator
 	private readonly ReadOnlySpan<IQueryTerm> _terms;
 	private readonly Span<int> _indices;
 	private readonly int _start, _startSafe, _count;
+	private readonly uint _tick;
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count)
+	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count, uint tick)
 	{
 		_archetypeIterator = archetypes.GetEnumerator();
 		_terms = terms;
@@ -140,6 +139,7 @@ public ref struct QueryIterator
 		_start = start;
 		_startSafe = start & Archetype.CHUNK_THRESHOLD;
 		_count = count;
+		_tick = tick;
 	}
 
 	public readonly int Count {
@@ -181,6 +181,7 @@ public ref struct QueryIterator
 
 		data.Size = Unsafe.SizeOf<T>();
 		data.Value.Value = ref Unsafe.Add(ref reference, _startSafe);
+		data.Value.MutationData = new PtrMutationData();
 
 		return data;
 	}
@@ -227,6 +228,18 @@ public ref struct QueryIterator
 		if (!span.IsEmpty)
 			span = span.Slice(_startSafe, Count);
 		return span;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void MarkChanged(int index, int row)
+	{
+		if (index >= _indices.Length)
+			return;
+		var i = _indices[index];
+
+		ref readonly var chunk = ref _chunkIterator.Current;
+		ref var column = ref chunk.GetColumn(i);
+		column.MarkChanged(row, _tick);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

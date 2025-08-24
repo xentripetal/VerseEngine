@@ -53,7 +53,7 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 		_set = set ?? new SystemTypeSet(GetType());
 		Params = [];
 	}
-	private ISystemSet _set;
+	protected ISystemSet _set;
 	
 	protected ISystemParam[] Params;
 	private bool _initialized;

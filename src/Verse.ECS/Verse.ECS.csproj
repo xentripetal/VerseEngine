@@ -22,6 +22,7 @@
       <PackageReference Include="Dunet" Version="1.11.3" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
       <PackageReference Include="QuikGraph" Version="2.5.0" />
+      <PackageReference Include="QuikGraph.Graphviz" Version="2.5.0" />
     </ItemGroup>
 
 

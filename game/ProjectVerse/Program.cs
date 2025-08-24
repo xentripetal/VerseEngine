@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.Logging;
 using ProjectVerse;
+using ProjectVerse.Utility;
 using Verse.ECS;
 using Verse.ECS.Scheduling;
 using Verse.ECS.Scheduling.Executor;
@@ -14,10 +15,14 @@ var factory = LoggerFactory.Create(builder => {
 	builder.AddConsole();
 });
 
-var entityA = world.Entity().Set((int) 1);//.Set(new List<int>());
+var entityA = world.Entity().Set((int)1); //.Set(new List<int>());
 var entityb = world.Entity().Set(true).Set(2);
-var schedules = new Schedule("main", new SimpleExecutor(new Logger<SimpleExecutor>(factory)));
+var schedule = new Schedule("main", new SingleThreadedExecutor(new Logger<SingleThreadedExecutor>(factory)));
 var dummy = new RunSystems();
-schedules.AddSystems(dummy);
-schedules.Run(world);
-schedules.Run(world);
+schedule.AddSystems(dummy);
+
+schedule.Run(world);
+schedule.Run(world);
+schedule.Run(world);
+schedule.Run(world);
+schedule.Run(world);

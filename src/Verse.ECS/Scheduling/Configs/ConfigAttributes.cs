@@ -67,8 +67,3 @@ public class InSetAttribute<T>(T set) : EnumSetReferenceAttribute<T>(set)
 {
     public override IIntoNodeConfigs<ISystem> Apply(IIntoNodeConfigs<ISystem> configs) => configs.InSet(ReferenceSet);
 }
-
-
-public class InTestSet(object t) : Attribute
-{
-}

@@ -115,7 +115,7 @@ public class AutoSystemContainer
 			if (generics.Length > 0) {
 				generics = $"<{generics}>";
 			}
-			sb.AppendLine($"{sys.Name} = new FuncSystem{generics}(container.{sys.Name}, \"{ClassName}.{sys.Name}\", new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{sys.Name}, true), SharedSystemComponent<{ClassName}>.RegisterWrite);");
+			sb.AppendLine($"{sys.Name} = new FuncSystem{generics}(container.{sys.Name}, \"{ClassName}.{sys.Name}\", new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{sys.Name}), SharedSystemComponent<{ClassName}>.RegisterWrite);");
 		}
 		sb.AppendLine("}");
 

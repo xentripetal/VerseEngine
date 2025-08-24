@@ -93,7 +93,6 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
 
         public override NodeConfigs<T> Before(IIntoSystemSet set)
         {
-            Config.Subgraph.Hierarchy.Add(set.IntoSystemSet());
             Config.Subgraph.Dependencies.Add(new Dependency(DependencyKind.Before, set.IntoSystemSet()));
             return this;
         }

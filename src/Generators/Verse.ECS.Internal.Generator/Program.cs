@@ -78,6 +78,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 				var fieldSign = GenerateSequence(i + 1, ", ", j => $"out Ptr<T{j}> ptr{j}");
 				var fieldAssignments = GenerateSequence(i + 1, "\n", j => $"ptr{j} = _current{j}.Value;");
 				var queryBuilderCalls = GenerateSequence(i + 1, "\n", j => $"builder.With<T{j}>();");
+				var mutators = GenerateSequence(i+1, "\n", j => $"if (_current{j}.Value.Mutated) _iterator.MarkChanged({j}, _index);");
 
 				sb.AppendLine($@"
 					[SkipLocalsInit]
@@ -129,6 +130,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 						[MethodImpl(MethodImplOptions.AggressiveInlining)]
 						public bool MoveNext()
 						{{
+							{mutators}
 							if (++_index >= _count)
 							{{
 								if (!_iterator.Next())
