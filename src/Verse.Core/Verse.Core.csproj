@@ -7,4 +7,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="IOC\" />
+    </ItemGroup>
 </Project>

@@ -1,28 +1,20 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using Microsoft.Extensions.Logging;
 using ProjectVerse;
-using ProjectVerse.Utility;
-using Verse.ECS;
-using Verse.ECS.Scheduling;
-using Verse.ECS.Scheduling.Executor;
+using Serilog;
+using Verse.Core;
 
-var app = new App();
-var world = new World();
+Log.Logger = new LoggerConfiguration()
+	.WriteTo.Console()
+	.CreateLogger();
+var app = App.Default();
+app.World.Entity().Set((int)1); //.Set(new List<int>());
+app.World.Entity().Set(true).Set(2);
 
+app.AddSchedulable(new RunSystems());
 
-var factory = LoggerFactory.Create(builder => {
-	builder.AddConsole();
-});
-
-var entityA = world.Entity().Set((int)1); //.Set(new List<int>());
-var entityb = world.Entity().Set(true).Set(2);
-var schedule = new Schedule("main", new SingleThreadedExecutor(new Logger<SingleThreadedExecutor>(factory)));
-var dummy = new RunSystems();
-schedule.AddSystems(dummy);
-
-schedule.Run(world);
-schedule.Run(world);
-schedule.Run(world);
-schedule.Run(world);
-schedule.Run(world);
+app.Update();
+app.Update();
+app.Update();
+app.Update();
+app.Update();

@@ -63,7 +63,7 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
     public static NodeConfigs<T> Of(NodeConfig<T> config) => new Node(config);
 
     public static NodeConfigs<T> Of(params IIntoNodeConfigs<T>[] configs) => Of(configs, null, Chain.No);
-
+    
     public static NodeConfigs<T> Of(IIntoNodeConfigs<T>[] configs, ICondition[]? collectiveConditions = null, Chain chained = Chain.No)
     {
         if (configs == null || configs.Length == 0)

@@ -2,15 +2,7 @@ using Verse.ECS.Scheduling.Configs;
 
 namespace Verse.ECS.Systems;
 
-public interface ISchedulable
-{
-	/// <summary>
-	/// Schedule any systems in this object onto the app
-	/// </summary>
-	/// <param name="app">App to schedule on</param>
-	/// <returns>Scheduled app</returns>
-	public App Schedule(App app);
-}
+
 
 public abstract class SystemsContainer : IIntoSystemConfigs, IIntoSystemSet
 {
@@ -48,7 +40,7 @@ public abstract class SystemsContainer : IIntoSystemConfigs, IIntoSystemSet
 /// 
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public struct SharedSystemComponent<T> where T : SystemsContainer
+public struct SharedSystemComponent<T> 
 {
 	public T Container;
 	public static void RegisterWrite(World world, ISystem system)

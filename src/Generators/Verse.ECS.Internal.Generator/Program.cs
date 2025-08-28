@@ -620,6 +620,8 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			sb.AppendLine("using Verse.ECS;");
 			sb.AppendLine("using Verse.ECS.Systems;");
+			
+			sb.AppendLine("namespace Verse.ECS.Systems;");
 
 
 			for (var i = 0; i < MAX_GENERICS; ++i) {
@@ -652,7 +654,7 @@ public sealed partial class FuncSystem<{genericsArgs}>(Action<{genericsArgs}> fn
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
 				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IIntoSystemParam<T{j}>");
-				sb.AppendLine($@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set);");
+				sb.AppendLine($@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null, Action<World, ISystem>? onInit = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set, onInit);");
 			}
 			sb.AppendLine("}");
 

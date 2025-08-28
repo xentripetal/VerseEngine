@@ -1,3 +1,6 @@
+using Serilog;
+using Verse.ECS.Scheduling;
+
 namespace Verse.ECS;
 
 /// <summary>
@@ -27,6 +30,7 @@ public sealed partial class World
 
 		OnPluginInitialization?.Invoke(this);
 	}
+
 
 	public ArchetypeRegistry Archetypes { get; }
 
@@ -121,14 +125,6 @@ public sealed partial class World
 		lock (_newEntLock) {
 			EntityView ent;
 			if (id == 0 || !Exists(id)) {
-				// if (IsDeferred)
-				// {
-				// 	if (id == 0)
-				// 		id = ++_entities.MaxID;
-				// 	CreateDeferred(id);
-				// 	return new EntityView(this, id);
-				// }
-
 				ref var record = ref NewId(out id, id);
 				record.Archetype = Root;
 				record.Chunk = Root.Add(id, out record.Row);
@@ -164,6 +160,41 @@ public sealed partial class World
 		return entity;
 	}
 
+	public void SetRes<T>(T value)
+	{
+		var res = ResMut<T>.Generate(this);
+		res.Value = value;
+	}
+
+	public void InitRes<T>()
+	{
+		ResMut<T>.Generate(this);
+	}
+
+	public ResMut<T> GetResMut<T>()
+	{
+		return ResMut<T>.Generate(this);
+	}
+
+	public ResMut<T> MustGetResMut<T>()
+	{
+		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
+		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
+	}
+
+	public Res<T> GetRes<T>()
+	{
+		return new Res<T>(ResMut<T>.Generate(this));
+	}
+
+	public Res<T> MustGetRes<T>()
+	{
+		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
+		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
+	}
+
 	/// <summary>
 	///     Delete the entity.<br />
 	///     Associated children are deleted too.
@@ -171,13 +202,6 @@ public sealed partial class World
 	/// <param name="entity"></param>
 	public void Delete(EcsID entity)
 	{
-		if (IsDeferred) {
-			if (Exists(entity))
-				DeleteDeferred(entity);
-
-			return;
-		}
-
 		lock (_newEntLock) {
 			OnEntityDeleted?.Invoke(this, entity);
 
@@ -200,11 +224,6 @@ public sealed partial class World
 	/// </summary>
 	public void SetChanged(EcsID entity, EcsID component)
 	{
-		if (IsDeferred) {
-			SetChangedDeferred(entity, component);
-			return;
-		}
-
 		ref var record = ref GetRecord(entity);
 		var index = record.Archetype.GetComponentIndex(component);
 		EcsAssert.Panic(index >= 0, "Component not found in the entity");
@@ -251,7 +270,7 @@ public sealed partial class World
 		ref var record = ref GetRecord(id);
 		return record.Archetype.All.AsSpan();
 	}
-	
+
 	/// <summary>
 	///     The archetype sign.<br />The sign is unique.
 	/// </summary>
@@ -262,8 +281,7 @@ public sealed partial class World
 		ref var record = ref GetRecord(id);
 		var slim = record.Archetype.All.AsSpan();
 		var components = new Component[slim.Length];
-		for (int i = 0; i < slim.Length; i++)
-		{
+		for (int i = 0; i < slim.Length; i++) {
 			components[i] = Registry.GetComponent(slim[i].Id);
 		}
 		return components;
@@ -278,24 +296,11 @@ public sealed partial class World
 	{
 		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size <= 0, "this is not a tag");
-
-		if (IsDeferred && !Has(entity, cmp.Id)) {
-			AddDeferred<T>(entity);
-
-			return;
-		}
-
 		_ = Attach(entity, in cmp);
 	}
 
 	public void Add(EcsID entity, EcsID id)
 	{
-		if (IsDeferred && !Has(entity, id)) {
-			SetDeferred(entity, id, null, 0);
-
-			return;
-		}
-
 		var c = new SlimComponent(id, 0);
 		_ = Attach(entity, in c);
 	}
@@ -310,13 +315,6 @@ public sealed partial class World
 	{
 		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size > 0, "this is not a component");
-
-		if (IsDeferred && !Has(entity, cmp.Id)) {
-			SetDeferred(entity, component);
-
-			return;
-		}
-
 		var (raw, row) = Attach(entity, in cmp);
 		var array = (T[])raw!;
 		array[row & ECS.Archetype.CHUNK_THRESHOLD] = component;
@@ -337,12 +335,6 @@ public sealed partial class World
 	/// <param name="id"></param>
 	public void Unset(EcsID entity, EcsID id)
 	{
-		if (IsDeferred) {
-			UnsetDeferred(entity, id);
-
-			return;
-		}
-
 		Detach(entity, id);
 	}
 
@@ -407,16 +399,6 @@ public sealed partial class World
 	/// <returns></returns>
 	public QueryBuilder QueryBuilder() => new QueryBuilder(this);
 
-	/// <summary>
-	///     Execute a deferred block.
-	/// </summary>
-	/// <param name="fn"></param>
-	public void Deferred(Action<World> fn)
-	{
-		BeginDeferred();
-		fn(this);
-		EndDeferred();
-	}
 
 	/// <summary>
 	///     Uncached query iterator
@@ -468,5 +450,70 @@ public sealed partial class World
 			_archetypeStack.Clear();
 			Renting<Stack<Archetype>>.Return(_archetypeStack);
 		}
+	}
+
+	/// <summary>
+	///     Runs the <see cref="Schedule" /> associated with the label a single time
+	/// </summary>
+	/// <param name="label"></param>
+	public void RunSchedule(string label)
+	{
+		ScheduleScope(label, (world, schedule) => { schedule.Run(world); });
+	}
+
+	/// <summary>
+	///     Temporarily removes the schedule associated with label from the <see cref="ScheduleContainer" />, passes it to the
+	///     provided fn, and finally re-adds it
+	///     to the container.
+	/// </summary>
+	/// <param name="label">Label of schedule to scope</param>
+	/// <param name="fn">Function to invoke with the schedule</param>
+	/// <typeparam name="T">Return type from the scoped function</typeparam>
+	/// <returns>response from fn</returns>
+	public void ScheduleScope(string label, Action<World, Schedule> fn)
+	{
+		var schedules = MustGetResMut<ScheduleContainer>();
+		if (schedules.Value == null) {
+			throw new ArgumentException("ScheduleContainer not found");
+		}
+		var schedule = schedules.Value.Remove(label);
+		if (schedule == null) {
+			throw new ArgumentException($"Schedule for label {label} not found");
+		}
+
+		fn(this, schedule);
+		var old = schedules.Value.Insert(schedule);
+		if (old != null) {
+			Log.Warning(
+				"Schedule {Label} was inserted during a call to PolyWorld.ScheduleScope, its value has been overwritten",
+				label);
+		}
+	}
+
+	public void AllowAmbiguousComponent<T>() where T : struct
+	{
+		var schedules = MustGetResMut<ScheduleContainer>();
+		if (schedules.Value == null) {
+			throw new ArgumentException("ScheduleContainer not found");
+		}
+		schedules.Value.AllowAmbiguousComponent<T>(this);
+	}
+
+	public void AllowAmbiguousResource<T>()
+	{
+		var schedules = MustGetResMut<ScheduleContainer>();
+		if (schedules.Value == null) {
+			throw new ArgumentException("ScheduleContainer not found");
+		}
+		schedules.Value.AllowAmbiguousComponent<Placeholder<ResMut<T>>>(this);
+	}
+
+	public void RegisterEvent<T>() where T : notnull
+	{
+		if (Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
+			return;
+
+		var ev = new EventParam<T>();
+		Entity<Placeholder<EventParam<T>>>().Set(new Placeholder<EventParam<T>> { Value = ev });
 	}
 }

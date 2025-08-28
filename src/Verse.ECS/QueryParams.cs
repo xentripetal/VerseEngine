@@ -140,7 +140,7 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 		}
 
 		// TODO why did tinyecs filter for < thisRun?
-		return _size > 0 && _stateRow.Value >= _lastRun; //&& _stateRow.Value < _thisRun;
+		return _size > 0 && _stateRow.Value > _lastRun; //&& _stateRow.Value < _thisRun;
 	}
 
 	public void SetTicks(uint lastRun, uint thisRun)

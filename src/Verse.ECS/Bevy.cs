@@ -402,7 +402,7 @@ public sealed class EventWriter<T> : ISystemParam, IIntoSystemParam<EventWriter<
 		if (arg.Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
 			return arg.Entity<Placeholder<EventParam<T>>>().Get<Placeholder<EventParam<T>>>().Value.Writer;
 
-		throw new NotImplementedException("EventWriter<T> must be created using the scheduler.AddEvent<T>() method");
+		throw new NotImplementedException("EventWriter<T> must be created using the world.AddEvent<T>() method");
 	}
 
 	public void Clear()
@@ -469,14 +469,9 @@ public class Query<TQueryData> : Query<TQueryData, Empty>, IIntoSystemParam<Quer
 
 	public new static Query<TQueryData> Generate(World arg)
 	{
-		if (arg.Entity<Placeholder<Query<TQueryData>>>().Has<Placeholder<Query<TQueryData>>>())
-			return arg.Entity<Placeholder<Query<TQueryData>>>().Get<Placeholder<Query<TQueryData>>>().Value;
-
 		var builder = arg.QueryBuilder();
 		TQueryData.Build(builder);
-		var q = new Query<TQueryData>(builder.Build());
-		arg.Entity<Placeholder<Query<TQueryData>>>().Set(new Placeholder<Query<TQueryData>> { Value = q });
-		return q;
+		return new Query<TQueryData>(builder.Build());
 	}
 }
 
@@ -493,15 +488,10 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<Qu
 
 	public static Query<TQueryData, TQueryFilter> Generate(World arg)
 	{
-		if (arg.Entity<Placeholder<Query<TQueryData, TQueryFilter>>>().Has<Placeholder<Query<TQueryData, TQueryFilter>>>())
-			return arg.Entity<Placeholder<Query<TQueryData, TQueryFilter>>>().Get<Placeholder<Query<TQueryData, TQueryFilter>>>().Value;
-
 		var builder = arg.QueryBuilder();
 		TQueryData.Build(builder);
 		TQueryFilter.Build(builder);
-		var q = new Query<TQueryData, TQueryFilter>(builder.Build());
-		arg.Entity<Placeholder<Query<TQueryData, TQueryFilter>>>().Set(new Placeholder<Query<TQueryData, TQueryFilter>> { Value = q });
-		return q;
+		return new Query<TQueryData, TQueryFilter>(builder.Build());
 	}
 
 	public QueryIter<TQueryData, TQueryFilter> GetEnumerator()
@@ -534,7 +524,8 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<Qu
 
 	private ISystem _system;
 	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
-		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
+		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun,
+			id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
 	public void Init(ISystem system, World world)
 	{
 		_system = system;
@@ -614,7 +605,8 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IIntoSystemParam<S
 
 	private ISystem _system;
 	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
-		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun, id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
+		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, _system.Meta.Ticks.ThisRun,
+			id == 0 ? _query.Iter(_system.Meta.Ticks.ThisRun) : _query.Iter(id, _system.Meta.Ticks.ThisRun));
 	public void Init(ISystem system, World world)
 	{
 		this._system = system;
@@ -683,33 +675,61 @@ public sealed class State<T>(T previous, T current) : ISystemParam, IIntoSystemP
 	public bool Ready(ISystem system, World world) => throw new NotImplementedException();
 }
 
-public class Res<T> : ISystemParam, IIntoSystemParam<Res<T>> where T : notnull
+public class ResMut<T> : ISystemParam, IIntoSystemParam<ResMut<T>>
 {
 	private T? _t;
 
 	public ref T? Value => ref _t;
 
-	public static Res<T> Generate(World arg)
-	{
-		if (arg.Entity<Placeholder<Res<T>>>().Has<Placeholder<Res<T>>>())
-			return arg.Entity<Placeholder<Res<T>>>().Get<Placeholder<Res<T>>>().Value;
+	public bool HasValue => !Unsafe.IsNullRef(ref _t) && _t is not null;
 
-		var res = new Res<T>();
-		arg.Entity<Placeholder<Res<T>>>().Set(new Placeholder<Res<T>> { Value = res });
+	public static ResMut<T> Generate(World arg)
+	{
+		if (arg.Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return arg.Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
+
+		var res = new ResMut<T>();
+		arg.Entity<Placeholder<ResMut<T>>>().Set(new Placeholder<ResMut<T>> { Value = res });
 		return res;
 	}
 
-	public static implicit operator T?(Res<T> reference)
+	public static implicit operator T?(ResMut<T> reference)
 		=> reference.Value;
 	public void Init(ISystem system, World world)
 	{
+		var c = world.GetComponent<Placeholder<ResMut<T>>>();
+		system.Meta.Access.AddUnfilteredWrite(c.Id);
 	}
 	public bool Ready(ISystem system, World world) => true;
 }
 
-public class ResRO<T> : Res<T> where T : notnull
+public class Res<T> : ISystemParam, IIntoSystemParam<Res<T>>
 {
-	public void Init(ISystem system, World world) { }
+	internal Res(ResMut<T> res) => _res = res;
+	private ResMut<T> _res;
+
+	public ref readonly T Value => ref _res.Value!;
+
+	public bool HasValue => _res.HasValue;
+
+	public void Init(ISystem system, World world)
+	{
+		var c = world.GetComponent<Placeholder<ResMut<T>>>();
+		system.Meta.Access.AddUnfilteredRead(c.Id);
+	}
+	public bool Ready(ISystem system, World world)
+	{
+		return _res.HasValue;
+	}
+
+	public static Res<T> Generate(World world)
+	{
+		if (world.Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return new (world.Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
+		var res = new ResMut<T>();
+		world.Entity<Placeholder<ResMut<T>>>().Set(new Placeholder<ResMut<T>> { Value = res });
+		return new (res);
+	}
 }
 
 public sealed class Local<T> : ISystemParam, IIntoSystemParam<Local<T>>
@@ -766,6 +786,7 @@ public sealed class SchedulerState : ISystemParam, IIntoSystemParam<SchedulerSta
 **/
 public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 {
+	private CommandBuffer _buffer;
 	private readonly World _world;
 
 	internal Commands(World world)
@@ -781,10 +802,11 @@ public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 	public EntityCommand Entity(EcsID id = 0)
 	{
 		var ent = _world.Entity(id);
-		return new EntityCommand(_world, ent.Id);
+		return new EntityCommand(_buffer, ent.Id);
 	}
 	public void Init(ISystem system, World world)
 	{
+		_buffer = system.Buffer;
 		system.Meta.HasDeferred = true;
 	}
 	public bool Ready(ISystem system, World world) => true;
@@ -792,37 +814,37 @@ public sealed class Commands : ISystemParam, IIntoSystemParam<Commands>
 
 public readonly ref struct EntityCommand
 {
-	private readonly World _world;
+	private readonly CommandBuffer _buffer;
 
-	internal EntityCommand(World world, EcsID id)
+	internal EntityCommand(CommandBuffer buffer, EcsID id)
 	{
-		(_world, ID) = (world, id);
+		(_buffer, ID) = (buffer, id);
 	}
-
 
 	public readonly EcsID ID;
 
-	public readonly EntityCommand Set<T>(T component) where T : struct
+	public EntityCommand Set<T>(T component) where T : struct
 	{
-		_world.SetDeferred(ID, component);
+		_buffer.Set(ID, component);
 		return this;
 	}
 
-	public readonly EntityCommand Add<T>() where T : struct
+	public EntityCommand Add<T>() where T : struct
 	{
-		_world.AddDeferred<T>(ID);
+
+		_buffer.Add<T>(ID);
 		return this;
 	}
 
-	public readonly EntityCommand Unset<T>() where T : struct
+	public EntityCommand Unset<T>() where T : struct
 	{
-		_world.UnsetDeferred<T>(ID);
+		_buffer.Unset<T>(ID);
 		return this;
 	}
 
-	public readonly EntityCommand Delete()
+	public EntityCommand Delete()
 	{
-		_world.DeleteDeferred(ID);
+		_buffer.Delete(ID);
 		return this;
 	}
 }

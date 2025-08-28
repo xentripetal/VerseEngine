@@ -21,9 +21,20 @@ public sealed partial class World : IDisposable
 	internal RelationshipEntityMapper RelationshipEntityMapper { get; }
 	internal NamingEntityMapper NamingEntityMapper { get; }
 
-	public uint Update() => ++_ticks;
-	
-	public ulong CurTick => _ticks;
+	public uint Update()
+	{
+		++_ticks;
+		// TODO track component removals and clear here
+		return _ticks;
+	}
+
+	public void Init()
+	{
+		if (_ticks == 0)
+			_ticks = 1;
+	}
+
+	public uint CurTick => _ticks;
 
 	internal ref EcsRecord NewId(out EcsID newId, ulong id = 0)
 	{
@@ -67,7 +78,7 @@ public sealed partial class World : IDisposable
 
 		OnComponentUnset?.Invoke(this, entity, new SlimComponent(id, -1));
 
-		BeginDeferred();
+		// TODO: do we need to lock
 
 		var foundArch = oldArch.TraverseLeft(id);
 		if (foundArch == null && oldArch.All.Length - 1 <= 0) {
@@ -95,7 +106,7 @@ public sealed partial class World : IDisposable
 
 		record.Chunk = record.Archetype.MoveEntity(foundArch!, ref record.Chunk, record.Row, true, out record.Row);
 		record.Archetype = foundArch!;
-		EndDeferred();
+		// TODO : end lock
 
 	}
 
@@ -112,8 +123,8 @@ public sealed partial class World : IDisposable
 			return (component.IsTag ? null : record.Chunk.Columns![column].Data, record.Row);
 		}
 
-		BeginDeferred();
 
+		// TODO : Do we need to lock?
 		var foundArch = oldArch.TraverseRight(component.Id);
 		if (foundArch == null) {
 			var hash = 0ul;
@@ -143,13 +154,14 @@ public sealed partial class World : IDisposable
 
 		record.Chunk = record.Archetype.MoveEntity(foundArch!, ref record.Chunk, record.Row, false, out record.Row);
 		record.Archetype = foundArch!;
-		EndDeferred();
+		// TODO : end lock
 
 		OnComponentSet?.Invoke(this, entity, component);
 
 		column = component.IsTag ? foundArch.GetAnyIndex(component.Id) : foundArch.GetComponentIndex(component.Id);
 		if (!component.IsTag) {
 			record.Chunk.MarkAdded(column, record.Row, _ticks);
+			record.Chunk.MarkChanged(column, record.Row, _ticks);
 		}
 		return (component.IsTag ? null : record.Chunk.Columns![column].Data, record.Row);
 	}
@@ -169,10 +181,11 @@ public sealed partial class World : IDisposable
 
 	internal ref T GetUntrusted<T>(EcsID entity, EcsID id, int size) where T : struct
 	{
+		/**
 		if (IsDeferred && !Has(entity, id)) {
 			Unsafe.SkipInit<T>(out var val);
 			return ref Unsafe.Unbox<T>(SetDeferred(entity, id, val, size)!);
-		}
+		}**/
 
 		ref var record = ref GetRecord(entity);
 		var column = record.Archetype.GetComponentIndex(id);

@@ -153,6 +153,8 @@ public class EnumSystemSet<T> : ISystemSet where T : struct, Enum
 	{
 		Value = set;
 	}
+	
+	public static EnumSystemSet<T> Of(T set) => new(set);
 
 	public T Value { get; }
 

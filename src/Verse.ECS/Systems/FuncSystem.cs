@@ -11,9 +11,9 @@ public abstract class BaseFuncSystem(string? name = null, ISystemSet? set = null
 	
 	public override void Initialize(World world)
 	{
+		base.Initialize(world);
 		if (OnInit != null)
 			OnInit(world, this);
-		base.Initialize(world);
 	}
 }
 

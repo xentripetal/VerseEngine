@@ -1,16 +1,14 @@
-using Microsoft.Extensions.Logging;
+using Serilog;
 using Verse.ECS.Systems;
 
 namespace Verse.ECS.Scheduling.Executor;
 
 public class SimpleExecutor : IExecutor
 {
-    public SimpleExecutor(ILogger<SimpleExecutor> logger)
+    public SimpleExecutor()
     {
-        Log = logger;
     }
     
-    private ILogger<SimpleExecutor> Log;
     /// <summary>
     ///     Systems that have run or been skipped
     /// </summary>
@@ -81,7 +79,7 @@ public class SimpleExecutor : IExecutor
             }
             catch (Exception e)
             {
-                Log.LogError(e, "Error in system {System}", system.Meta.Name);
+                Log.Error(e, "Error in system {System}", system.Meta.Name);
             }
         }
         EvaluatedSets.Clear();

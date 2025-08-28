@@ -1,6 +1,7 @@
 using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
 using Verse.ECS.Systems;
+using Verse.Core;
 
 namespace ProjectVerse;
 
@@ -9,13 +10,13 @@ public class Example
 	public int Value;
 }
 
-public partial class RunSystems : SystemsContainer
+public partial class RunSystems
 {
 	[Schedule]
-	[After<Sets>(Sets.Act3)]
+	[Before<Sets>(Sets.Act2)]
 	public void Act1(Commands commands, Query<Data<int>, Writes<int>> q)
 	{
-		foreach (var (_, data) in q) {
+		foreach (var (e, data) in q) {
 			if (data.Ref < 4) {
 				data.Mut++;
 			} else {
@@ -25,9 +26,9 @@ public partial class RunSystems : SystemsContainer
 	}
 
 	[Schedule]
-	public void Act2(Res<Example> b)
+	public void Act2(ResMut<Example> b)
 	{
-		if (b.Value == null) {
+		if (!b.HasValue) {
 			b.Value = new Example();
 		} else {
 			b.Value.Value++;
@@ -36,7 +37,7 @@ public partial class RunSystems : SystemsContainer
 
 	[Schedule]
 	[After<Sets>(Sets.Act2)]
-	public void Act3(Query<Data<int>, Changed<int>> q, Res<Example> b)
+	public void Act3(Query<Data<int>, Changed<int>> q, ResMut<Example> b)
 	{
 		Console.WriteLine(b.Value.Value);
 		foreach (var (entity, data) in q) {

@@ -3,3 +3,6 @@
 - [ ] Flesh out Res behavior
 - [ ] SubApps
 - [ ] Allow marking components that don't need apply deferred (Res/Commands)
+- [ ] Required components
+- [ ] Events
+- [ ] Delete tracking

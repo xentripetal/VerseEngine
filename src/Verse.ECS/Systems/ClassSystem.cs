@@ -42,19 +42,22 @@ public interface ISystem : IMetaSystem
 	/// </summary>
 	/// <param name="world"></param>
 	public void TryRun(World world, uint tick);
-}
 
+	public void ApplyDeferred(World world);
+
+	public CommandBuffer Buffer { get; }
+}
 
 public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 {
 	protected ClassSystem(string? name = null, ISystemSet? set = null)
 	{
 		Meta = new SystemMeta(name ?? GetType().Name);
-		_set = set ?? new SystemTypeSet(GetType());
+		Set = set ?? new SystemTypeSet(GetType());
 		Params = [];
 	}
-	protected ISystemSet _set;
-	
+	protected readonly ISystemSet Set;
+
 	protected ISystemParam[] Params;
 	private bool _initialized;
 	public void SetParams(params ISystemParam[] parameters)
@@ -63,9 +66,11 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 			throw new InvalidOperationException("Cannot set parameters after the system has been initialized");
 		Params = parameters;
 	}
+	public CommandBuffer Buffer { get; private set; }
 	public SystemMeta Meta { get; }
 	public virtual void Initialize(World world)
 	{
+		Buffer = new CommandBuffer(world);
 		_initialized = true;
 		foreach (var param in Params) {
 			param.Init(this, world);
@@ -74,9 +79,9 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 
 	public virtual List<ISystemSet> GetDefaultSystemSets()
 	{
-		return [_set];
+		return [Set];
 	}
-	public ISystemSet IntoSystemSet() => _set;
+	public ISystemSet IntoSystemSet() => Set;
 
 	public virtual void TryRun(World world, uint tick)
 	{
@@ -87,6 +92,12 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 		}
 		Run(world);
 		Meta.Ticks.LastRun = tick;
+	}
+
+	public void ApplyDeferred(World world)
+	{
+		if (Buffer._operations.Count > 0)
+			world.ApplyCommandBuffer(Buffer);
 	}
 
 	public abstract void Run(World world);

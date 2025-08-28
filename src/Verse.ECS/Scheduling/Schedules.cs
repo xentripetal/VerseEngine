@@ -1,3 +1,4 @@
+using Verse.ECS.Scheduling.Configs;
 using Verse.ECS.Scheduling.Graph;
 
 namespace Verse.ECS.Scheduling;
@@ -67,5 +68,29 @@ public class ScheduleContainer
 	{
 		var c = world.Registry.GetSlimComponent<T>();
 		AllowAmbiguousComponent(c.Id);
+	}
+
+	public void IgnoreAmbiguity(string schedule, IIntoSystemSet a, IIntoSystemSet b)
+	{
+		if (!Schedules.TryGetValue(schedule, out var sched)) {
+			throw new ArgumentException($"Schedule {schedule} not found when trying to add systems");
+		}
+		sched.IgnoreAmbiguity(a.IntoSystemSet(), b.IntoSystemSet());
+	}
+
+	public void AddSystems(string schedule, IIntoSystemConfigs systems)
+	{
+		if (!Schedules.TryGetValue(schedule, out var sched)) {
+			throw new ArgumentException($"Schedule {schedule} not found when trying to add systems");
+		}
+		sched.AddSystems(systems.IntoConfigs());
+	}
+
+	public void ConfigureSets(string schedule, IIntoSystemSetConfigs configs)
+	{
+		if (!Schedules.TryGetValue(schedule, out var sched)) {
+			throw new ArgumentException($"Schedule {schedule} not found when trying to configure sets");
+		}
+		sched.ConfigureSets(configs.IntoConfigs());
 	}
 }

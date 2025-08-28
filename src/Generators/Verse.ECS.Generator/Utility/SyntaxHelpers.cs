@@ -20,6 +20,25 @@ public static class SyntaxHelpers
 		return false;
 	}
 
+	public static bool HasMethod(this TypeDeclarationSyntax declaration, string methodName, string[] args, string returnType, CancellationToken cancel = default)
+	{
+		foreach (var mem in declaration.Members) {
+			if (mem is MethodDeclarationSyntax method && method.Identifier.ValueText == methodName) {
+				if (method.ParameterList.Parameters.Count == args.Length) {
+					for (var i = 0; i < args.Length; i++) {
+						if (method.ParameterList.Parameters[i].Type?.ToString() != args[i]) {
+							return false;
+						}
+					}
+					return method.ReturnType.ToString() == returnType;
+				}
+
+			}
+		}
+		return false;
+	}
+
+
 	public static List<MethodDeclarationSyntax> MethodsWithAttribute(
 		this TypeDeclarationSyntax declaration,
 		string attributeName,
