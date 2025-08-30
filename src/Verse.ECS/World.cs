@@ -3,6 +3,7 @@ namespace Verse.ECS;
 public sealed partial class World : IDisposable
 {
 	public ComponentRegistry Registry;
+	public EventRegistry EventRegistry;
 
 	private static readonly Comparison<SlimComponent> _comparisonCmps = (a, b)
 		=> ComponentComparer.CompareTerms(a.Id, b.Id);
@@ -25,6 +26,8 @@ public sealed partial class World : IDisposable
 	{
 		++_ticks;
 		// TODO track component removals and clear here
+		EventRegistry.Update(this, _ticks);
+		
 		return _ticks;
 	}
 

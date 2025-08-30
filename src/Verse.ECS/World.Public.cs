@@ -14,6 +14,7 @@ public sealed partial class World
 	public World()
 	{
 		Registry = new ComponentRegistry(this);
+		EventRegistry = new EventRegistry();
 		Archetypes = new ArchetypeRegistry();
 		_comparer = new ComponentComparer();
 		Root = new Archetype(
@@ -52,7 +53,6 @@ public sealed partial class World
 		Archetypes.Clear();
 		RelationshipEntityMapper.Clear();
 		NamingEntityMapper.Clear();
-
 	}
 
 
@@ -515,5 +515,15 @@ public sealed partial class World
 
 		var ev = new EventParam<T>();
 		Entity<Placeholder<EventParam<T>>>().Set(new Placeholder<EventParam<T>> { Value = ev });
+		EventRegistry.Register(ev);
+	}
+
+	public void WriteEvent<T>(in T value) where T : notnull
+	{
+		if (!Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
+			throw new Exception($"Event {typeof(T).FullName} has not been registered in this world");
+
+		var ev = Entity<Placeholder<EventParam<T>>>().Get<Placeholder<EventParam<T>>>().Value;
+		ev.Writer.Enqueue(value);
 	}
 }

@@ -24,6 +24,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Verse.Core\Verse.Core.csproj"/>
+        <!--<ProjectReference Include="..\Verse.MoonWorks.Native\Verse.MoonWorks.Native.csproj"/>-->
+        <ProjectReference Include="..\..\src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj" OutputItemType="Analyzer"/>
     </ItemGroup>
 
     <Import Project=".\CopyLibs.targets"/>

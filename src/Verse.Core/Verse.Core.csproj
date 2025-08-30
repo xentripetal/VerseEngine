@@ -6,8 +6,9 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj"/>
+        <ProjectReference Include="..\..\src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj" OutputItemType="Analyzer"/>
     </ItemGroup>
     <ItemGroup>
-      <Folder Include="IOC\" />
+      <Folder Include="Schedules\" />
     </ItemGroup>
 </Project>

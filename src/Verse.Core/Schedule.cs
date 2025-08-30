@@ -1,4 +1,4 @@
-using Verse.ECS.Scheduling.Executor;
+using Verse.ECS.Scheduling;
 
 namespace Verse.Core;
 
@@ -36,28 +36,28 @@ public static class Schedules
 	/// * <see cref="PostUpdate"/>
 	/// * <see cref="Last"/>
 	/// </summary>
-	public static string Main = "Main";
+	public const string Main = "Main";
 	/// The schedule that runs before <see cref="Startup"/>
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
-	public static string PreStartup = "PreStartup";
+	public const string PreStartup = "PreStartup";
 	/// The schedule that runs once when the app starts.
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
-	public static string Startup = "Startup";
+	public const string Startup = "Startup";
 	/// <summary>
 	/// The schedule that runs once after [`Startup`].
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string PostStartup = "PostStartup";
+	public const string PostStartup = "PostStartup";
 
 	/// <summary>
 	/// Runs first in the schedule
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string First = "First";
+	public const string First = "First";
 	/// <summary>
 	/// The schedule that contains logic that must run before <see cref="Update"/>. For example, a system that reads raw keyboard
 	/// input OS events into an `Events` resource. This enables systems in <see cref="Update"/> to consume the events from the `Events`
@@ -68,7 +68,7 @@ public static class Schedules
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string PreUpdate = "PreUpdate";
+	public const string PreUpdate = "PreUpdate";
 
 	/// <summary>
 	/// Runs the <see cref="FixedMain"/> schedule in a loop according until all relevant elapsed time has been "consumed".
@@ -81,7 +81,7 @@ public static class Schedules
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string RunFixedMainLoop = "RunFixedMainLoop";
+	public const string RunFixedMainLoop = "RunFixedMainLoop";
 
 	/// <summary>
 	/// Runs first in the <see cref="FixedMain"/> schedule.
@@ -89,7 +89,7 @@ public static class Schedules
 	/// See the <see cref="FixedMain"/> schedule for details on how fixed updates work.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedFirst = "FixedFirst";
+	public const string FixedFirst = "FixedFirst";
 
 	/// <summary>
 	/// The schedule that contains logic that must run before <see cref="FixedUpdate"/>.
@@ -97,7 +97,7 @@ public static class Schedules
 	/// See the <see cref="FixedMain"/> schedule for details on how fixed updates work.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedPreUpdate = "FixedPreUpdate";
+	public const string FixedPreUpdate = "FixedPreUpdate";
 
 	/// <summary>
 	/// The schedule that contains most gameplay logic, which runs at a fixed rate rather than every render frame.
@@ -113,7 +113,7 @@ public static class Schedules
 	/// See the <see cref="FixedMain"/> schedule for details on how fixed updates work.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedUpdate = "FixedUpdate";
+	public const string FixedUpdate = "FixedUpdate";
 
 	/// <summary>
 	/// The schedule that runs after the <see cref="FixedUpdate"/> schedule, for reacting
@@ -122,7 +122,7 @@ public static class Schedules
 	/// See the <see cref="FixedMain"/> schedule for details on how fixed updates work.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedPostUpdate = "FixedPostUpdate";
+	public const string FixedPostUpdate = "FixedPostUpdate";
 
 	/// <summary>
 	/// The schedule that runs last in <see cref="FixedMain"/>
@@ -130,7 +130,7 @@ public static class Schedules
 	/// See the <see cref="FixedMain"/> schedule for details on how fixed updates work.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedLast = "FixedLast";
+	public const string FixedLast = "FixedLast";
 
 	/// <summary>
 	/// The schedule that contains systems which only run after a fixed period of time has elapsed.
@@ -142,7 +142,7 @@ public static class Schedules
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string FixedMain = "FixedMain";
+	public const string FixedMain = "FixedMain";
 
 	/// <summary>
 	/// The schedule that contains any app logic that must run once per render frame.
@@ -156,14 +156,14 @@ public static class Schedules
 	/// See the <see cref="FixedUpdate"/> schedule for examples of systems that *should not* use this schedule.
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string Update = "Update";
+	public const string Update = "Update";
 
 	/// <summary>
 	/// The schedule that contains scene spawning.
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string SpawnScene = "SpawnScene";
+	public const string SpawnScene = "SpawnScene";
 
 	/// <summary>
 	/// The schedule that contains logic that must run after <see cref="Update"/>. For example, synchronizing "local transforms" in a hierarchy
@@ -175,12 +175,12 @@ public static class Schedules
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
 	/// </summary>
-	public static string PostUpdate = "PostUpdate";
+	public const string PostUpdate = "PostUpdate";
 
 	/// Runs last in the schedule.
 	///
 	/// See the <see cref="Main"/> schedule for some details about how schedules are run.
-	public static string Last = "Last";
+	public const string Last = "Last";
 }
 
 public class MainScheduleOrder

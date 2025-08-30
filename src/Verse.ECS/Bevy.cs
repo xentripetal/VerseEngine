@@ -351,6 +351,28 @@ public interface IEventParam
 	void Clear();
 }
 
+public class EventRegistry()
+{
+	protected List<IEventParam> _eventParams = new List<IEventParam>();
+
+	/// <summary>
+	/// Updates all of the registered events in the world
+	/// </summary>
+	/// <param name="world"></param>
+	/// <param name="tick"></param>
+	public void Update(World world, uint tick)
+	{
+		foreach (var ev in _eventParams) {
+			ev.Clear();
+		}
+	}
+
+	internal void Register<T>(EventParam<T> ev) where T : notnull
+	{
+		_eventParams.Add(ev);
+	}
+}
+
 internal sealed class EventParam<T> : IEventParam, IIntoSystemParam<EventParam<T>>, ISystemParam where T : notnull
 {
 	private readonly List<T> _eventsLastFrame = new List<T>(), _eventsThisFrame = new List<T>();
@@ -449,7 +471,7 @@ public sealed class EventReader<T> : ISystemParam, IIntoSystemParam<EventReader<
 	{
 		system.Meta.Access.AddUnfilteredRead(world.GetComponent<Placeholder<EventParam<T>>>().Id);
 	}
-	public bool Ready(ISystem system, World world) => throw new NotImplementedException();
+	public bool Ready(ISystem system, World world) => true;
 }
 
 partial class World : ISystemParam, IIntoSystemParam<World>

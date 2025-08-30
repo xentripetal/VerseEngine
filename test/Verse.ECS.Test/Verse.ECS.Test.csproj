@@ -18,4 +18,12 @@
         <Using Include="Xunit"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Verse.ECS\Verse.ECS.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Scheduling\" />
+    </ItemGroup>
+
 </Project>

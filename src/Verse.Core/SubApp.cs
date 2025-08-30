@@ -187,6 +187,21 @@ public class SubApp
 	}
 	public SubApp AddPlugin(IPlugin plugin)
 	{
+		RunAsApp(app => AddPluginToApp(app, plugin));
+		return this;
+	}
+
+	/// <summary>
+	/// Adds the given plugin to the app. This App MUST have this SubApp as its main app.
+	/// </summary>
+	/// <param name="app"></param>
+	/// <param name="plugin"></param>
+	/// <exception cref="ArgumentException"></exception>
+	internal void AddPluginToApp(App app, IPlugin plugin)
+	{
+		if (app.SubApps.Main != this) {
+			throw new ArgumentException("App must be this SubApp's main app");
+		}
 		if (plugin.IsUnique && PluginNames.Contains(plugin.Name)) {
 			throw new ArgumentException("Plugin with name " + plugin.Name + " already added");
 		}
@@ -195,15 +210,15 @@ public class SubApp
 		Plugins.Add(new PlaceholderPlugin());
 		PluginBuildDepth++;
 		try {
-			RunAsApp(app => plugin.Build(app));
+			plugin.Build(app);
 		}
 		finally {
 			PluginNames.Add(plugin.Name);
 			PluginBuildDepth--;
 		}
 		Plugins[index] = plugin;
-		return this;
 	}
+	
 	public bool IsPluginAdded(IPlugin plugin)
 	{
 		return PluginNames.Contains(plugin.Name);

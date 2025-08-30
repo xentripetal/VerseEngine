@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using SDL3;
+using Serilog;
 
 namespace Verse.MoonWorks;
 
@@ -42,11 +43,11 @@ public static class Logger
 	internal static unsafe void SDLLog(IntPtr userdata, int category, SDL.SDL_LogPriority priority, byte* message)
 	{
 		if (priority == SDL.SDL_LogPriority.SDL_LOG_PRIORITY_INFO) {
-			LogInfo(Marshal.PtrToStringUTF8((nint)message));
+			Log.Information(Marshal.PtrToStringUTF8((nint)message));
 		} else if (priority == SDL.SDL_LogPriority.SDL_LOG_PRIORITY_WARN) {
-			LogWarn(Marshal.PtrToStringUTF8((nint)message));
+			Log.Warning(Marshal.PtrToStringUTF8((nint)message));
 		} else if (priority == SDL.SDL_LogPriority.SDL_LOG_PRIORITY_ERROR) {
-			LogError(Marshal.PtrToStringUTF8((nint)message));
+			Log.Error(Marshal.PtrToStringUTF8((nint)message));
 		}
 	}
 }

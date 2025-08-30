@@ -184,7 +184,7 @@ public class App
 	}
 	public App AddPlugin(IPlugin plugin)
 	{
-		SubApps.Main.AddPlugin(plugin);
+		SubApps.Main.AddPluginToApp(this, plugin);
 		return this;
 	}
 
@@ -220,7 +220,7 @@ public class App
 				code = (int)Math.Max(code, err.ExitCode);
 			}
 		}
-		return code == 0 ? new AppExit.Success() : new AppExit.Err((uint)code);
+		return code == 0 ? new AppExit.Success() : new AppExit.Err(code);
 	}
 
 
@@ -245,7 +245,7 @@ public class App
 public partial record AppExit
 {
 	public partial record Success();
-	public partial record Err(uint ExitCode);
+	public partial record Err(int ExitCode);
 }
 
 /// <summary>
