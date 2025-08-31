@@ -56,7 +56,7 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 		Set = set ?? new SystemTypeSet(GetType());
 		Params = [];
 	}
-	protected readonly ISystemSet Set;
+	protected ISystemSet Set;
 
 	protected ISystemParam[] Params;
 	private bool _initialized;
@@ -71,10 +71,12 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 	public virtual void Initialize(World world)
 	{
 		Buffer = new CommandBuffer(world);
-		_initialized = true;
 		foreach (var param in Params) {
 			param.Init(this, world);
 		}
+		var attributes = GetCustomAttributes();
+		SystemConfigAttribute.ApplyAll(this, attributes);
+		_initialized = true;
 	}
 
 	public virtual List<ISystemSet> GetDefaultSystemSets()
@@ -106,8 +108,17 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 		IIntoNodeConfigs<ISystem> baseConfig = NodeConfigs<ISystem>.Of(new SystemConfig(this));
 
 		// Apply any attributes of this type onto its base config
-		var attributes = Attribute.GetCustomAttributes(GetType(), true);
+		var attributes = GetCustomAttributes();
 		return SystemConfigAttribute.ApplyAll(baseConfig, attributes).IntoConfigs();
+	}
+	
+	/// <summary>
+	/// Gets attributes for this system. If you are wrapping a method, you should override this to return the attributes of the method.
+	/// </summary>
+	/// <returns></returns>
+	protected virtual Attribute[] GetCustomAttributes()
+	{
+		return Attribute.GetCustomAttributes(GetType(), true);
 	}
 
 

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using Verse.Core;
+using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
 
 namespace Verse.Core;
