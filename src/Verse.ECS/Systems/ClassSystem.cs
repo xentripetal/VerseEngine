@@ -107,13 +107,7 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 
 		// Apply any attributes of this type onto its base config
 		var attributes = Attribute.GetCustomAttributes(GetType(), true);
-		foreach (var attr in attributes) {
-			if (attr is SystemConfigAttribute configAttr) {
-				baseConfig = configAttr.Apply(baseConfig);
-			}
-		}
-
-		return baseConfig.IntoConfigs();
+		return SystemConfigAttribute.ApplyAll(baseConfig, attributes).IntoConfigs();
 	}
 
 

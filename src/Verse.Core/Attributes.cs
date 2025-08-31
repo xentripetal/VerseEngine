@@ -18,20 +18,25 @@ namespace Verse.Core;
 /// </summary>
 public class ScheduleAttribute(string? schedule = null) : Attribute
 {
-	public App Schedule(App app, IIntoSystemConfigs system, Attribute[] attributes)
+	public App Schedule(App app, IIntoSystemConfigs system, params Attribute[] attributes)
 	{
 		system = SystemConfigAttribute.ApplyAll(system, attributes);
 		return schedule != null ? app.AddSystems(schedule, system) : app.AddSystems(system);
 	}
 
-	public static App ScheduleFromMethod(App app, IIntoSystemConfigs system, MethodInfo method)
+	public static App ScheduleFromAttributes(App app, IIntoSystemConfigs system, params Attribute[] attributes)
 	{
-		var attrs = GetCustomAttributes(method);
-		foreach (var attr in attrs) {
+		foreach (var attr in attributes) {
 			if (attr is ScheduleAttribute systemAttr) {
-				return systemAttr.Schedule(app, system, attrs);
+				return systemAttr.Schedule(app, system, attributes);
 			}
 		}
 		throw new Exception("No ScheduleAttribute found");
+	}
+
+	public static App ScheduleFromMethod(App app, IIntoSystemConfigs system, MethodInfo method)
+	{
+		var attrs = GetCustomAttributes(method);
+		return ScheduleFromAttributes(app, system, attrs);
 	}
 }

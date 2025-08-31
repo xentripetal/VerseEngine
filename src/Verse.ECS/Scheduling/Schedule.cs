@@ -16,7 +16,7 @@ public enum ExecutorKind
 ///     A collection of systems, and the metadata and executor needed to run them
 ///     in a certain order under certain conditions.
 /// </summary>
-public class Schedule
+public class Schedule 
 {
 	internal SystemSchedule Executable;
 	internal IExecutor Executor;

@@ -14,7 +14,7 @@ namespace Verse.Core;
 /// the "main" one. To access a particular [`SubApp`], use [`get_sub_app`](App::get_sub_app)
 /// or [`get_sub_app_mut`](App::get_sub_app_mut).
 /// </summary>
-public class App 
+public class App : IDisposable
 {
 	public static AppExit RunOnce(App app)
 	{
@@ -233,12 +233,28 @@ public class App
 	{
 		return SubApps.Subs.GetValueOrDefault(name);
 	}
-	
+
 	public void RemoveSubApp(string name)
 	{
 		SubApps.Subs.Remove(name);
 	}
 
+	private uint _isDisposed = 0;
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	protected virtual void Dispose(bool disposing)
+	{
+		if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 0) {
+			if (disposing) {
+				SubApps.Dispose();
+				SubApps = null!;
+			}
+		}
+	}
 }
 
 [Union]
@@ -251,7 +267,7 @@ public partial record AppExit
 /// <summary>
 /// The collection of sub-apps that belong to a <see cref="App"/>
 /// </summary>
-public class SubApps : IEnumerable<SubApp>
+public sealed class SubApps : IEnumerable<SubApp>, IDisposable
 {
 	public SubApp Main;
 	public Dictionary<string, SubApp> Subs;
@@ -286,4 +302,24 @@ public class SubApps : IEnumerable<SubApp>
 	}
 	public IEnumerator<SubApp> GetEnumerator() => GetSubApps().GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	private uint _isDisposed = 0;
+	void Dispose(bool disposing)
+	{
+		if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 0) {
+			if (disposing) {
+				Main.Dispose();
+				Main = null!;
+				foreach (var subApp in Subs) {
+					subApp.Value.Dispose();
+				}
+				Subs = null!;
+			}
+		}
+	}
 }

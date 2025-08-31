@@ -354,6 +354,10 @@ public interface IEventParam
 public class EventRegistry()
 {
 	protected List<IEventParam> _eventParams = new List<IEventParam>();
+	public void Clear()
+	{
+		_eventParams.Clear();
+	}
 
 	/// <summary>
 	/// Updates all of the registered events in the world

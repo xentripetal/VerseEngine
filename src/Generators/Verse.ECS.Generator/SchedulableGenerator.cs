@@ -120,6 +120,7 @@ public class SchedulableGenerator : IIncrementalGenerator
 		public string Generate(SourceProductionContext ctx)
 		{
 			HashSet<string> dedupedUsings = new HashSet<string>();
+			dedupedUsings.Add("System.Reflection");
 			var parents = GetParents(Syntax);
 
 			var sb = new StringBuilder();
@@ -158,8 +159,11 @@ public class SchedulableGenerator : IIncrementalGenerator
 				var extraProps = system.IsStatic ? "" : $"private {ClassName} _systems;";
 				var extraInit = system.IsStatic ? "" : $"Meta.Access.AddUnfilteredWrite(world.GetComponent<Verse.ECS.Systems.SharedSystemComponent<{ClassName}>>().Id);";
 				var methodCall = system.IsStatic ? $"{ClassName}.{system.Name}" : $"_systems.{system.Name}";
+				var attributes = GenHelpers.GenerateSequence(system.Attributes.Count, "\n", i => $"[{system.Attributes[i]}]");
 
 				sb.AppendLine($@"
+[System.Runtime.CompilerServices.SkipLocalsInit]
+{attributes}
 public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 	public {name}({constructorParameters}) {{
 		{constructorBody}
@@ -168,7 +172,7 @@ public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 	{GenHelpers.GenerateSequence(system.Params.Count, "\n", j => $"private {system.Params[j].GenParamType()} _p{j};")}
 	{extraProps}
 
-	public override List<Verse.ECS.Systems.ISystemSet> GetDefaultSystemSets() {{
+	public override System.Collections.Generic.List<Verse.ECS.Systems.ISystemSet> GetDefaultSystemSets() {{
 		return [Set, new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All)];
 	}}
 
@@ -202,13 +206,11 @@ public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 				return;
 			}
 			sb.AppendLine("public App Schedule(App app) {");
-			sb.AppendLine($"var t = typeof({ClassName});");
 			foreach (var sys in Systems) {
 				var systemReference = sys.IsStatic ? $"new {ClassName}.{sys.Name}System()" : $"new {ClassName}.{sys.Name}System(this)";
-				sb.AppendLine($@"app = ScheduleAttribute.ScheduleFromMethod(
-					app, 
-					{systemReference},	
-					t.GetMethod(nameof({sys.Name}))!);");
+				sb.AppendLine(string.IsNullOrEmpty(sys.ScheduleLabel)
+					? $"app = app.AddSystems({systemReference});"
+					: $"app = app.AddSystems({sys.ScheduleLabel}, {systemReference});");
 			}
 			sb.AppendLine("return app;");
 			sb.AppendLine("}");

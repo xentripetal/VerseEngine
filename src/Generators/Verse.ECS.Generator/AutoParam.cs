@@ -82,8 +82,8 @@ public struct AutoParam
 	public string GenParamType()
 	{
 		return Type switch {
-			ParamType.Res    => $"Res<{TypeToken}>",
-			ParamType.ResMut => $"ResMut<{TypeToken}>",
+			ParamType.Res    => $"Verse.ECS.Res<{TypeToken}>",
+			ParamType.ResMut => $"Verse.ECS.ResMut<{TypeToken}>",
 			_                => TypeToken
 		};
 	}

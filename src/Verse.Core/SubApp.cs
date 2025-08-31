@@ -4,7 +4,7 @@ using Verse.ECS.Scheduling.Configs;
 
 namespace Verse.Core;
 
-public class SubApp 
+public class SubApp : IDisposable
 {
 	public delegate void ExtractHandler(World from, World to);
 
@@ -218,7 +218,7 @@ public class SubApp
 		}
 		Plugins[index] = plugin;
 	}
-	
+
 	public bool IsPluginAdded(IPlugin plugin)
 	{
 		return PluginNames.Contains(plugin.Name);
@@ -263,6 +263,22 @@ public class SubApp
 			RunAsApp(app => plugin.Cleanup(app));
 		}
 		PluginState = PluginsState.Cleaned;
+	}
+
+	private uint _isDisposed;
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+
+	private void Dispose(bool disposing)
+	{
+		if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 1) {
+			if (disposing) {
+				World.Dispose();
+			}
+		}
 	}
 }
 

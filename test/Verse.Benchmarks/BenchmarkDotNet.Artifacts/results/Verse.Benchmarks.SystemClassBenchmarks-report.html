@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Verse.Benchmarks.SystemClassBenchmarks-20250831-105826</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.2, macOS Sequoia 15.6.1 (24G90) [Darwin 24.6.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.100-preview.7.25380.108
+  [Host]     : .NET 10.0.0 (10.0.25.38108), Arm64 RyuJIT AdvSIMD
+  DefaultJob : .NET 10.0.0 (10.0.25.38108), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>SystemType </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>RunSystem</td><td>ClassSystem</td><td>76.10 ns</td><td>1.330 ns</td><td>1.179 ns</td><td>0.0267</td><td>168 B</td>
+</tr><tr><td>RunSystem</td><td>ClassSystemStatic</td><td>75.56 ns</td><td>0.553 ns</td><td>0.490 ns</td><td>0.0267</td><td>168 B</td>
+</tr><tr><td>RunSystem</td><td>FuncSystem</td><td>76.32 ns</td><td>0.419 ns</td><td>0.392 ns</td><td>0.0267</td><td>168 B</td>
+</tr><tr><td>RunSystem</td><td>FuncSystemStatic</td><td>76.61 ns</td><td>0.880 ns</td><td>0.780 ns</td><td>0.0267</td><td>168 B</td>
+</tr></tbody></table>
+</body>
+</html>

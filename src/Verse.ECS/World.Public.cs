@@ -53,6 +53,7 @@ public sealed partial class World
 		Archetypes.Clear();
 		RelationshipEntityMapper.Clear();
 		NamingEntityMapper.Clear();
+		EventRegistry.Clear();
 	}
 
 
