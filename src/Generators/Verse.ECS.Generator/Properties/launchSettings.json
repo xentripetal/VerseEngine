@@ -4,6 +4,10 @@
     "Generators": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "../../../game/ProjectVerse/ProjectVerse.csproj"
+    },
+    "GenMoonWorks": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../../../src/Verse.MoonWorks/Verse.MoonWorks.csproj"
     }
   }
 }

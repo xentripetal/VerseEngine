@@ -195,8 +195,8 @@ public SystemEntries Systems {
 			if (Syntax.HasMethod("IntoSystemSet", [], "ISystemSet")) {
 				return;
 			}
-			sb.AppendLine($@"public override ISystemSet IntoSystemSet() {{
-	return new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All);
+			sb.AppendLine($@"public override Verse.ECS.Systems.ISystemSet IntoSystemSet() {{
+	return new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All);
 }}
 ");
 		}

@@ -12,26 +12,17 @@ public static class Logger
 
 	private static void LogInfoDefault(string str)
 	{
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.Write("INFO: ");
-		Console.ForegroundColor = ConsoleColor.White;
-		Console.WriteLine(str);
+		Log.Information(str);
 	}
 
 	private static void LogWarnDefault(string str)
 	{
-		Console.ForegroundColor = ConsoleColor.Yellow;
-		Console.Write("WARN: ");
-		Console.ForegroundColor = ConsoleColor.White;
-		Console.WriteLine(str);
+		Log.Warning(str);
 	}
 
 	private static void LogErrorDefault(string str)
 	{
-		Console.ForegroundColor = ConsoleColor.Red;
-		Console.Write("ERROR: ");
-		Console.ForegroundColor = ConsoleColor.White;
-		Console.WriteLine(str);
+		Log.Error(str);
 	}
 
 	internal static unsafe void InitSDLLogging()

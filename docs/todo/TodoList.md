@@ -1,8 +1,12 @@
 - [x] Currently queries are set to always access terms as a write. We need the ability to express read only terms.
 - [ ] Add State
 - [ ] Flesh out Res behavior
-- [ ] SubApps
+- [x] SubApps
 - [ ] Allow marking components that don't need apply deferred (Res/Commands)
 - [ ] Required components
-- [ ] Events
+- [ ] Events rework
 - [ ] Delete tracking
+- [ ] Dispose behavior for components
+- [ ] Assets
+- [x] Improve code gen to not require Res wrappers
+- [x] Improve code gen to not use FuncSystems.

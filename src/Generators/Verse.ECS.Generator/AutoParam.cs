@@ -20,17 +20,20 @@ public struct AutoParam
 			if (mod.Text == "in") {
 				access = AccessModifier.In;
 			} else if (mod.Text == "ref") {
-				access = AccessModifier.Ref;
-			} else {
-				return null;
+				access = access == AccessModifier.Readonly ? AccessModifier.RefReadonly : AccessModifier.Ref;
+			} else if (mod.Text == "readonly") {
+				access = access == AccessModifier.Ref ? AccessModifier.RefReadonly : AccessModifier.Readonly;
 			}
 		}
 		var kind = ParamType.Unknown;
-		var iinto = typeInfo.AllInterfaces.First(x => x.Name.Equals("IIntoSystemParam"));
+		var iinto = typeInfo.AllInterfaces.FirstOrDefault(x => x.Name.Equals("IIntoSystemParam"));
 		if (iinto is not null) {
 			kind = ParamType.IInto;
 		} else {
-			return null;
+			kind = ParamType.ResMut;
+			if (access is AccessModifier.In or AccessModifier.RefReadonly) {
+				kind = ParamType.Res;
+			}
 		}
 		return new AutoParam {
 			Type = kind,
@@ -46,15 +49,26 @@ public struct AutoParam
 	{
 		Unknown,
 		IInto,
-		Res
+		Res,
+		ResMut,
 	}
 
 	public enum AccessModifier
 	{
+		None,
+		Readonly,
+		RefReadonly,
 		Ref,
 		In,
-		None
 	}
+
+	public string AccessModifierText => Access switch {
+		AccessModifier.In   => "in ",
+		AccessModifier.Ref  => "ref ",
+		AccessModifier.RefReadonly => "in ",
+		AccessModifier.Readonly => "", // can't actually happen
+		AccessModifier.None => "",
+	};
 
 	public TypeInfo SemanticType;
 	public string TypeToken;
@@ -65,4 +79,32 @@ public struct AutoParam
 
 	public MethodDeclarationSyntax Method;
 
+	public string GenParamType()
+	{
+		return Type switch {
+			ParamType.Res    => $"Res<{TypeToken}>",
+			ParamType.ResMut => $"ResMut<{TypeToken}>",
+			_                => TypeToken
+		};
+	}
+
+	public string GenInitializer()
+	{
+		return Type switch {
+			ParamType.IInto  => $"{TypeToken}.Generate(world)",
+			ParamType.Res    => $"world.GetRes<{TypeToken}>()",
+			ParamType.ResMut => $"world.GetResMut<{TypeToken}>()",
+			_                => "default"
+		};
+	}
+
+	public string GenCaller(string paramName)
+	{
+		var modifier = AccessModifierText;
+		if (Type == ParamType.IInto)
+			return modifier + paramName;
+		if (Type == ParamType.ResMut || Type == ParamType.Res)
+			return $"{modifier}{paramName}.Value";
+		return paramName;
+	}
 }

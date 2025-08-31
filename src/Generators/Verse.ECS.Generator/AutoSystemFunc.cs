@@ -8,6 +8,7 @@ public struct AutoSystemFunc
 	public List<AutoParam> Params;
 	public string Name;
 	public bool IsScheduled;
+	public bool IsStatic;
 	public static AutoSystemFunc? TryParse(GeneratorSyntaxContext ctx, MethodDeclarationSyntax method, CancellationToken cancel = default)
 	{
 		var autoParams = new List<AutoParam>();
@@ -27,6 +28,7 @@ public struct AutoSystemFunc
 				}
 			}
 		}
-		return new AutoSystemFunc { Params = autoParams, Name = method.Identifier.ValueText, IsScheduled = isScheduled };
+		var isStatic = method.Modifiers.Any(modifier => modifier.ToString() == "static");
+		return new AutoSystemFunc { Params = autoParams, Name = method.Identifier.ValueText, IsScheduled = isScheduled, IsStatic = isStatic };
 	}
 }

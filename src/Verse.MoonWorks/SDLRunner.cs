@@ -13,10 +13,6 @@ public class SDLRunner
 
 	public AppExit Run(App app)
 	{
-		if (app.PluginsState() == PluginsState.Ready) {
-			app.Finish();
-			app.Cleanup();
-		}
 		app.InitRes(SDLApp);
 		return SDLApp.DirectRun();
 	}

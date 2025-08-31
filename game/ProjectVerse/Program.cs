@@ -22,7 +22,5 @@ app.Update();
 var app = App.Default();
 app.AddPlugin(new MoonWorksPlugin(new AppInfo("Xentripetal", "ProjectVerse")));
 app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));
-app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));
-app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));
 app.Run();
 Log.CloseAndFlush();

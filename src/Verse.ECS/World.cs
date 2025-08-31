@@ -49,7 +49,7 @@ public sealed partial class World : IDisposable
 		return ref record;
 	}
 
-	internal ref readonly SlimComponent GetComponent<T>() where T : struct
+	public ref readonly SlimComponent GetComponent<T>() where T : struct
 	{
 		// todo - is ref here actually faster?
 		ref readonly var lookup = ref Registry.GetSlimComponent<T>();

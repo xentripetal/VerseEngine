@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -13,6 +14,8 @@ public class SchedulableGenerator : IIncrementalGenerator
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		var autoSystems = SyntaxProvider(context);
+		// wait for debugger
+		//Debugger.Launch();
 
 		// Report any diagnostic failures
 		context.RegisterSourceOutput(autoSystems.
@@ -117,9 +120,6 @@ public class SchedulableGenerator : IIncrementalGenerator
 		public string Generate(SourceProductionContext ctx)
 		{
 			HashSet<string> dedupedUsings = new HashSet<string>();
-			dedupedUsings.Add("System");
-			dedupedUsings.Add("Verse.ECS");
-			dedupedUsings.Add("Verse.ECS.Systems");
 			var parents = GetParents(Syntax);
 
 			var sb = new StringBuilder();
@@ -136,17 +136,54 @@ public class SchedulableGenerator : IIncrementalGenerator
 			}
 			sb.AppendLine($"    public partial class {ClassName} : Verse.Core.ISchedulable {{");
 
-			AddSetsEnum(sb);
 			AddSchedule(sb);
+			AddSetsEnum(sb);
+			AddSystemClasses(sb);
 
 			for (var i = 0; i < parents.Count; i++) {
 				sb.AppendLine($"	}}");
 			}
 			sb.AppendLine($"	}}");
 			sb.AppendLine($"}}");
-			sb.AppendLine($"}}");
 
 			return sb.ToString();
+		}
+
+		private void AddSystemClasses(StringBuilder sb)
+		{
+			foreach (var system in Systems) {
+				var name = $"{system.Name}System";
+				var constructorParameters = system.IsStatic ? "" :  ClassName + " systems";
+				var constructorBody = system.IsStatic ? "" : "_systems = systems;";
+				var extraProps = system.IsStatic ? "" : $"private {ClassName} _systems;";
+				var extraInit = system.IsStatic ? "" : $"Meta.Access.AddUnfilteredWrite(world.GetComponent<Verse.ECS.Systems.SharedSystemComponent<{ClassName}>>().Id);";
+				var methodCall = system.IsStatic ? $"{ClassName}.{system.Name}" : $"_systems.{system.Name}";
+
+				sb.AppendLine($@"
+public partial class {name} : Verse.ECS.Systems.ClassSystem {{
+	public {name}({constructorParameters}) {{
+		{constructorBody}
+	}}
+
+	{GenHelpers.GenerateSequence(system.Params.Count, "\n", j => $"private {system.Params[j].GenParamType()} _p{j};")}
+	{extraProps}
+
+	public override List<Verse.ECS.Systems.ISystemSet> GetDefaultSystemSets() {{
+		return [Set, new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All)];
+	}}
+
+	public override void Initialize(World world) {{	
+		{GenHelpers.GenerateSequence(system.Params.Count, "\n", j => $"_p{j} = {system.Params[j].GenInitializer()};")}
+		SetParams({GenHelpers.GenerateSequence(system.Params.Count, ", ", j => $"_p{j}")});
+		{extraInit}
+		base.Initialize(world);
+	}}
+
+	public override void Run(World world) {{
+		{methodCall}({GenHelpers.GenerateSequence(system.Params.Count, ", ", j => system.Params[j].GenCaller($"_p{j}"))});	
+	}}
+}}");
+			}
 		}
 
 		private void AddSetsEnum(StringBuilder sb)
@@ -167,18 +204,14 @@ public class SchedulableGenerator : IIncrementalGenerator
 			sb.AppendLine("public App Schedule(App app) {");
 			sb.AppendLine($"var t = typeof({ClassName});");
 			foreach (var sys in Systems) {
-				var generics = GenHelpers.GenerateSequence(sys.Params.Count, ", ", j => sys.Params[j].TypeToken);
-				if (generics.Length > 0) {
-					generics = $"<{generics}>";
-				}
+				var systemReference = sys.IsStatic ? $"new {ClassName}.{sys.Name}System()" : $"new {ClassName}.{sys.Name}System(this)";
 				sb.AppendLine($@"app = ScheduleAttribute.ScheduleFromMethod(
 					app, 
-					FuncSystem.Of{generics}({sys.Name}, ""{ClassName}.{sys.Name}"", new MethodSystemSet<{ClassName}>(""{sys.Name}""), SharedSystemComponent<{ClassName}>.RegisterWrite).
-						InSet(new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{sys.Name})). 
-						InSet(new EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All)), 
+					{systemReference},	
 					t.GetMethod(nameof({sys.Name}))!);");
 			}
 			sb.AppendLine("return app;");
+			sb.AppendLine("}");
 		}
 
 		private Stack<string> GetParents(TypeDeclarationSyntax syntax)
