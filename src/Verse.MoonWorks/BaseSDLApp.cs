@@ -13,9 +13,9 @@ public abstract class BaseSDLApp
 		try {
 			var exitCode = SDL.SDL_EnterAppMainCallbacks(argc, argv, SDL_AppInit, SDL_AppIterate, SDL_AppEvent, SDL_AppQuit);
 			if (exitCode == 0) {
-				return new AppExit.Success();
+				return AppExit.Success();
 			}
-			return new AppExit.Err(exitCode);
+			return AppExit.Err(exitCode);
 		}
 		finally {
 			// TODO actually test this.
@@ -52,9 +52,9 @@ public abstract class BaseSDLApp
 	protected AppExit MapAppExit(SDL.SDL_AppResult result)
 	{
 		if (result == SDL.SDL_AppResult.SDL_APP_SUCCESS) {
-			return new AppExit.Success();
+			return AppExit.Success();
 		}
-		return new AppExit.Err((int)result);
+		return AppExit.Err((int)result);
 	}
 
 	private IntPtr TranslateArgs(string[] args, out int argc)
@@ -68,7 +68,7 @@ public abstract class BaseSDLApp
 		return argv;
 	}
 
-	unsafe SDL.SDL_AppResult SDL_AppInit(IntPtr appstate, int argc, IntPtr argv)
+	SDL.SDL_AppResult SDL_AppInit(IntPtr appstate, int argc, IntPtr argv)
 	{
 		try {
 			return Init();
@@ -107,7 +107,7 @@ public abstract class BaseSDLApp
 
 	protected abstract unsafe SDL.SDL_AppResult OnEvent(SDL.SDL_Event* e);
 
-	unsafe void SDL_AppQuit(IntPtr appstate, SDL.SDL_AppResult result)
+	void SDL_AppQuit(IntPtr appstate, SDL.SDL_AppResult result)
 	{
 		try {
 			OnQuit(result);

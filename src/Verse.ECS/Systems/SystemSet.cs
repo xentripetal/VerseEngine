@@ -147,20 +147,53 @@ public class MethodSystemSet<T>(string Method) : ISystemSet
 	public bool IsSystemAlias() => true;
 }
 
-public class EnumSystemSet<T> : ISystemSet where T : struct, Enum
+public struct EnumSets<T>(params T[] Sets) : IIntoSystemSetConfigs where T : struct, Enum
 {
-	public EnumSystemSet(T set)
+	public static EnumSets<T> Of(params T[] sets) => new EnumSets<T>(sets);
+	public NodeConfigs<ISystemSet> IntoConfigs() => NodeConfigs<ISystemSet>.Of(Sets.Select(EnumSet<T>.Of));
+	
+	// re-export all the interface methods from IIntoSystemConfigs to make it easier to chain them
+	#region IIntoSystemConfigs
+	public NodeConfigs<ISystemSet> InSet(IIntoSystemSet set) => IntoConfigs().InSet(set);
+
+	public NodeConfigs<ISystemSet> InSet<ISystemSetEnum>(ISystemSetEnum set) where ISystemSetEnum : struct, Enum => IntoConfigs().InSet(set);
+
+	public NodeConfigs<ISystemSet> Before(IIntoSystemSet set) => IntoConfigs().Before(set);
+
+	public NodeConfigs<ISystemSet> After(IIntoSystemSet set) => IntoConfigs().After(set);
+
+	public NodeConfigs<ISystemSet> BeforeIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().BeforeIgnoreDeferred(set);
+
+	public NodeConfigs<ISystemSet> AfterIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().AfterIgnoreDeferred(set);
+
+	public NodeConfigs<ISystemSet> Chained() => IntoConfigs().Chained();
+
+	public NodeConfigs<ISystemSet> ChainedIgnoreDeferred() => IntoConfigs().ChainedIgnoreDeferred();
+
+	public NodeConfigs<ISystemSet> RunIf(ICondition condition) => IntoConfigs().RunIf(condition);
+
+	public NodeConfigs<ISystemSet> DistributiveRunIf(ICondition condition) => IntoConfigs().DistributiveRunIf(condition);
+
+	public NodeConfigs<ISystemSet> AmbiguousWith(IIntoSystemSet set) => IntoConfigs().AmbiguousWith(set);
+
+	public NodeConfigs<ISystemSet> AmbiguousWithAll() => IntoConfigs().AmbiguousWithAll();
+	#endregion
+}
+
+public class EnumSet<T> : ISystemSet where T : struct, Enum
+{
+	public EnumSet(T set)
 	{
 		Value = set;
 	}
-	
-	public static EnumSystemSet<T> Of(T set) => new(set);
+
+	public static EnumSet<T> Of(T set) => new (set);
 
 	public T Value { get; }
 
 	public bool Equals(ISystemSet? other)
 	{
-		if (other is EnumSystemSet<T> otherEnum) {
+		if (other is EnumSet<T> otherEnum) {
 			return Value.Equals(otherEnum.Value);
 		}
 		return false;

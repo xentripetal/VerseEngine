@@ -46,7 +46,7 @@ public class MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags)
 		}
 		var exit = VerseApp.ShouldExit();
 		if (exit == null) return SDL.SDL_AppResult.SDL_APP_CONTINUE;
-		return exit is AppExit.Err ? SDL.SDL_AppResult.SDL_APP_FAILURE : SDL.SDL_AppResult.SDL_APP_SUCCESS;
+		return exit.Value.IsErr ? SDL.SDL_AppResult.SDL_APP_FAILURE : SDL.SDL_AppResult.SDL_APP_SUCCESS;
 	}
 
 
@@ -56,7 +56,7 @@ public class MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags)
 		switch (e->type) {
 			// Send this down to ECS so systems can react to it. It will get picked up during Iterate and shut down from there.
 			case (uint)SDL.SDL_EventType.SDL_EVENT_QUIT:
-				World.WriteEvent<AppExit>(new AppExit.Success());
+				World.WriteEvent(AppExit.Success());
 				break;
 			case (uint)SDL.SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 				World.WriteEvent(new CloseWindowRequest(e->window.windowID));

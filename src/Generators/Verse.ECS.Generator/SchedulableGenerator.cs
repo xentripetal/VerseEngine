@@ -162,7 +162,6 @@ public class SchedulableGenerator : IIncrementalGenerator
 				var attributes = GenHelpers.GenerateSequence(system.Attributes.Count, "\n", i => $"[{system.Attributes[i]}]");
 
 				sb.AppendLine($@"
-[System.Runtime.CompilerServices.SkipLocalsInit]
 {attributes}
 public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 	public {name}({constructorParameters}) {{
@@ -173,7 +172,7 @@ public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 	{extraProps}
 
 	public override System.Collections.Generic.List<Verse.ECS.Systems.ISystemSet> GetDefaultSystemSets() {{
-		return [Set, new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSystemSet<{ClassName}.Sets>({ClassName}.Sets.All)];
+		return [Set, new Verse.ECS.Systems.EnumSet<{ClassName}.Sets>({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSet<{ClassName}.Sets>({ClassName}.Sets.All)];
 	}}
 
 	public override void Initialize(World world) {{	

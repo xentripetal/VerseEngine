@@ -1,5 +1,4 @@
 using System.Collections;
-using Dunet;
 using Verse.ECS;
 using Verse.ECS.Scheduling;
 using Verse.ECS.Scheduling.Configs;
@@ -24,7 +23,7 @@ public class App : IDisposable
 		app.Finish();
 		app.Cleanup();
 		app.Update();
-		return app.ShouldExit() ?? new AppExit.Success();
+		return app.ShouldExit() ?? AppExit.Success();
 	}
 	internal App(RunnerHandler runFn, SubApp main, params SubApp[] subApps)
 	{
@@ -216,11 +215,9 @@ public class App : IDisposable
 		}
 		var code = 0;
 		foreach (var exitEvent in reader) {
-			if (exitEvent is AppExit.Err err) {
-				code = (int)Math.Max(code, err.ExitCode);
-			}
+			code = Math.Max(code, exitEvent.ExitCode);
 		}
-		return code == 0 ? new AppExit.Success() : new AppExit.Err(code);
+		return new AppExit(code);
 	}
 
 
@@ -257,11 +254,14 @@ public class App : IDisposable
 	}
 }
 
-[Union]
-public partial record AppExit
+public record struct AppExit(int ErrCode)
 {
-	public partial record Success();
-	public partial record Err(int ExitCode);
+	public static AppExit Success() => new AppExit(0);
+	public static AppExit Err(int exitCode) => new AppExit(exitCode);
+	public bool IsSuccess => ErrCode == 0;
+	public bool IsErr => ErrCode != 0;
+	public int ExitCode => ErrCode;
+	public override string ToString() => IsSuccess ? "Success" : $"Err({ErrCode})";
 }
 
 /// <summary>

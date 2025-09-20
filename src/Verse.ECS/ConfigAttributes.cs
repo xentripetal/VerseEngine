@@ -70,7 +70,7 @@ public abstract class EnumSetReferenceAttribute<T> : SystemConfigAttribute where
 {
 	protected IIntoSystemSet ReferenceSet;
 
-	public EnumSetReferenceAttribute(T set) => ReferenceSet = new EnumSystemSet<T>(set);
+	public EnumSetReferenceAttribute(T set) => ReferenceSet = new EnumSet<T>(set);
 }
 
 public abstract class GenericSetReferenceAttribute<T> : SystemConfigAttribute where T : ISystem

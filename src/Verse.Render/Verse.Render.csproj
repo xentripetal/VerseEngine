@@ -7,7 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Verse.MoonWorks\Verse.MoonWorks.csproj" />
+        <ProjectReference Include="..\Verse.Tracing\Verse.Tracing.csproj"/>
+        <ProjectReference Include="..\Verse.Assets\Verse.Assets.csproj"/>
+        <ProjectReference Include="..\Verse.MoonWorks\Verse.MoonWorks.csproj"/>
+        <ProjectReference Include="..\Verse.Transform\Verse.Transform.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj" OutputItemType="Analyzer"/>
     </ItemGroup>
 
 </Project>

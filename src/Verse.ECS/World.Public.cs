@@ -138,6 +138,7 @@ public sealed partial class World
 		}
 	}
 
+
 	/// <summary>
 	///     Get or create an entity from a component.
 	/// </summary>
@@ -161,16 +162,19 @@ public sealed partial class World
 		return entity;
 	}
 
-	public void SetRes<T>(T value)
-	{
-		var res = ResMut<T>.Generate(this);
-		res.Value = value;
-	}
+	public void SetRes<T>(T value) => InitRes<T>(value);
 
 	public void InitRes<T>()
 	{
 		ResMut<T>.Generate(this);
 	}
+
+	public void InitRes<T>(T value)
+	{
+		ResMut<T>.Generate(this).Value = value;
+	}
+
+	public ResMut<T> GetResourceMut<T>() => GetResMut<T>();
 
 	public ResMut<T> GetResMut<T>()
 	{
@@ -183,6 +187,8 @@ public sealed partial class World
 			return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
 		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
 	}
+
+	public Res<T> GetResource<T>() => GetRes<T>();
 
 	public Res<T> GetRes<T>()
 	{
@@ -509,6 +515,7 @@ public sealed partial class World
 		schedules.Value.AllowAmbiguousComponent<Placeholder<ResMut<T>>>(this);
 	}
 
+	public void AddEvent<T>() where T : notnull => RegisterEvent<T>();
 	public void RegisterEvent<T>() where T : notnull
 	{
 		if (Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
@@ -526,5 +533,17 @@ public sealed partial class World
 
 		var ev = Entity<Placeholder<EventParam<T>>>().Get<Placeholder<EventParam<T>>>().Value;
 		ev.Writer.Enqueue(value);
+	}
+
+	/// <summary>
+	/// Sets Res<T> to null
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	public void RemoveRes<T>()
+	{
+		var entity = Entity<Placeholder<ResMut<T>>>();
+		if (entity.Has<Placeholder<ResMut<T>>>()) {
+			entity.Get<Placeholder<ResMut<T>>>().Value.Value = default(T);
+		}
 	}
 }

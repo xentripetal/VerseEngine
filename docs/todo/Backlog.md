@@ -1,0 +1,29 @@
+- [x] Currently queries are set to always access terms as a write. We need the ability to express read only terms.
+- [ ] Add State
+- [ ] Flesh out Res behavior
+  - [ ] Add FromWorld trait and use it for resource init
+  - [ ] Should we even allow null resources?
+  - [ ] Fix codegen calling everything resmut and bypassing value checks
+- [x] SubApps
+- [ ] Allow marking components that don't need apply deferred (Res/Commands)
+- [ ] Required components
+- [ ] Events rework
+- [ ] Delete tracking
+- [ ] Dispose behavior for components
+- [ ] From World behavior for components
+- [ ] Dependency injection of managed classes. 
+  - track dependencies in their systems
+- [ ] Assets
+  - needs an asset loader system
+  - needs to support both loading from sdl storage and csharp filesystem so we can do reloads
+- [x] Improve code gen to not require Res wrappers
+- [x] Improve code gen to not use FuncSystems.
+- [ ] Add code gen for labels
+- [ ] Shader Imports
+  - Shader cache
+- [ ] Observer behaviors
+- [ ] Test and verify hook behaviors
+- [x] Improve EnumSystemSet behavior
+- [ ] Figure out what to do about Fix64
+- [ ] Rewrite Matrix4 to Affine3 with SIMD
+- [ ] 

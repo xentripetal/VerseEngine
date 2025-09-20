@@ -36,9 +36,9 @@ public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlu
 			ConfigureSets(Schedules.RunFixedMainLoop,
 				// TODO this sucks. figure out a better ergonomic
 				NodeConfigs<ISystemSet>.Of([
-					EnumSystemSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.BeforeFixedMainLoop),
-					EnumSystemSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.FixedMainLoop),
-					EnumSystemSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.AfterFixedMainLoop),
+					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.BeforeFixedMainLoop),
+					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.FixedMainLoop),
+					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.AfterFixedMainLoop),
 				], chained: Chain.Yes));
 
 	}

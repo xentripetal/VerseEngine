@@ -194,7 +194,6 @@ public sealed partial class World : IDisposable
 		var column = record.Archetype.GetComponentIndex(id);
 		return ref record.Chunk.GetReferenceAt<T>(column, record.Row);
 	}
-	internal delegate Query QueryFactoryDel(World world, ReadOnlySpan<IQueryTerm> terms);
 }
 
 internal struct EcsRecord

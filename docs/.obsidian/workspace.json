@@ -1,0 +1,209 @@
+{
+  "main": {
+    "id": "009454df172e45d1",
+    "type": "split",
+    "children": [
+      {
+        "id": "f285c03388cc8ce6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "122efbe4aeaeb39c",
+            "type": "leaf",
+            "state": {
+              "type": "kanban",
+              "state": {
+                "file": "todo/Sprints/Engine Prep.md",
+                "kanbanViewState": {
+                  "kanban-plugin": "board",
+                  "list-collapse": [
+                    false,
+                    false,
+                    false
+                  ]
+                }
+              },
+              "icon": "lucide-trello",
+              "title": "Engine Prep"
+            }
+          }
+        ]
+      },
+      {
+        "id": "fcc29bdd0b566a35",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b260fa9590ba8477",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "todo/Backlog.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Backlog"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "793f2d63fa7d6d47",
+    "type": "split",
+    "children": [
+      {
+        "id": "aa49067e2cf44859",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "deda940d1764a5fd",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "e3493cd4d3991aa9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "8479b2babdff93e9",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8c285f77a00168b5",
+    "type": "split",
+    "children": [
+      {
+        "id": "15a2849e25753f4c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "22e212070b50a3bc",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "todo/Backlog.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Backlog"
+            }
+          },
+          {
+            "id": "83010d75c7e1c780",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "todo/Backlog.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Backlog"
+            }
+          },
+          {
+            "id": "8e93233965f42678",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "fc487d1311fddc2f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "todo/Backlog.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Backlog"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "obsidian-kanban:Create new board": false
+    }
+  },
+  "active": "b260fa9590ba8477",
+  "lastOpenFiles": [
+    "Misc/Discriminated Unions.md",
+    "todo/Sprints/Engine Prep.md",
+    "todo/Backlog.md",
+    "Misc",
+    "todo/QueryReadWrites.md",
+    "Projects.md",
+    "todo/Sprints"
+  ]
+}

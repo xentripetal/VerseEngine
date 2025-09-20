@@ -3,6 +3,7 @@
 using Serilog;
 using Verse.Core;
 using Verse.MoonWorks;
+using Verse.Render;
 
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 /**
@@ -21,6 +22,7 @@ app.Update();
 
 var app = App.Default();
 app.AddPlugin(new MoonWorksPlugin(new AppInfo("Xentripetal", "ProjectVerse")));
+app.AddPlugin(new RenderPlugin());
 app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));
 app.Run();
 Log.CloseAndFlush();

@@ -13,6 +13,7 @@
         <ProjectReference Include="..\..\src\Verse.Editor\Verse.Editor.csproj"/>
         <ProjectReference Include="..\..\src\Verse.MoonWorks\Verse.MoonWorks.csproj"/>
         <ProjectReference Include="..\..\src\Verse.MoonWorks.Native\Verse.MoonWorks.Native.csproj"/>
+        <ProjectReference Include="..\..\src\Verse.Render\Verse.Render.csproj" />
     </ItemGroup>
 
     <ItemGroup>

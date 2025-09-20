@@ -16,7 +16,7 @@ public enum ExecutorKind
 ///     A collection of systems, and the metadata and executor needed to run them
 ///     in a certain order under certain conditions.
 /// </summary>
-public class Schedule 
+public class Schedule
 {
 	internal SystemSchedule Executable;
 	internal IExecutor Executor;
@@ -24,7 +24,7 @@ public class Schedule
 	public readonly SystemGraph Graph;
 
 
-	public Schedule(string name, ExecutorKind executorKind)
+	public Schedule(string name, ExecutorKind executorKind = ExecutorKind.SingleThreaded)
 	{
 		Name = name;
 		Graph = new SystemGraph();
@@ -134,5 +134,17 @@ public class Schedule
 			Graph.ConfigureSets(set);
 		}
 		return this;
+	}
+	/// <summary>
+	/// Directly applies any accumulated system parameters to the world.
+	///
+	/// This does not need to be called under normal circumstances. It is used in rendering to extract data from the main world,
+	/// storing the data in system buffers, before applying their buffers in a different world
+	/// </summary>
+	public void ApplyDeferred(World world)
+	{
+		foreach (var system in Executable.Systems) {
+			system.ApplyDeferred(world);
+		}
 	}
 }

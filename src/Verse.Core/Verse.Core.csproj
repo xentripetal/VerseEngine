@@ -13,4 +13,7 @@
     <ItemGroup>
       <Folder Include="Schedules\" />
     </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Verse.ECS.Tests" />
+    </ItemGroup>
 </Project>

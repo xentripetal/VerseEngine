@@ -164,6 +164,11 @@ public class SubApp : IDisposable
 	{
 		return GetSchedules().Get(label);
 	}
+	public SubApp AddSchedulable(ISchedulable schedulable)
+	{
+		RunAsApp(app => schedulable.Schedule(app));
+		return this;
+	}
 	public SubApp AllowAmbiguousComponent<T>() where T : struct
 	{
 		World.AllowAmbiguousComponent<T>();

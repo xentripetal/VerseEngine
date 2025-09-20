@@ -12,7 +12,7 @@ public abstract class SetConfigs : NodeConfigs<ISystemSet>
         var convertedSets = new IIntoNodeConfigs<ISystemSet>[sets.Length];
         for (var i = 0; i < sets.Length; i++)
         {
-            convertedSets[i] = new EnumSystemSet<T>(sets[i]);
+            convertedSets[i] = new EnumSet<T>(sets[i]);
         }
         return NodeConfigs<ISystemSet>.Of(convertedSets);
     }
@@ -38,7 +38,7 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
     /// </summary>
     /// <param name="set"></param>
     /// <typeparam name="TEnum"></typeparam>
-    public NodeConfigs<T> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => InSet(new EnumSystemSet<TEnum>(set));
+    public NodeConfigs<T> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => InSet(new EnumSet<TEnum>(set));
 
     public abstract NodeConfigs<T> Before(IIntoSystemSet set);
 
@@ -64,19 +64,13 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
 
     public static NodeConfigs<T> Of(params IIntoNodeConfigs<T>[] configs) => Of(configs, null, Chain.No);
     
-    public static NodeConfigs<T> Of(IIntoNodeConfigs<T>[] configs, ICondition[]? collectiveConditions = null, Chain chained = Chain.No)
+    public static NodeConfigs<T> Of(IEnumerable<IIntoNodeConfigs<T>> configs, ICondition[]? collectiveConditions = null, Chain chained = Chain.No)
     {
-        if (configs == null || configs.Length == 0)
+        if (configs == null)
         {
             throw new ArgumentException("NodeConfigs must not be empty");
         }
-
-
-        var convertedConfigs = new NodeConfigs<T>[configs.Length];
-        for (var i = 0; i < configs.Length; i++)
-        {
-            convertedConfigs[i] = configs[i].IntoConfigs();
-        }
+        var convertedConfigs = configs.Select(x => x.IntoConfigs()).ToArray();
         return new Configs(convertedConfigs, collectiveConditions, chained);
     }
 

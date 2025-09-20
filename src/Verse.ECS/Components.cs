@@ -1,8 +1,6 @@
-using System.Text;
-using Dunet;
-
 namespace Verse.ECS;
 
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 internal sealed class ComponentComparer :
 	IComparer<ulong>,
 	IComparer<SlimComponent>
@@ -22,11 +20,30 @@ public readonly record struct SlimComponent(ulong Id, int Size)
 	public bool IsTag => Size == 0;
 }
 
-[Union]
-public partial record ComponentType
+public readonly record struct ComponentType
 {
-	public partial record CLRType(Type Type, int Size);
-	public partial record EntityTag(EcsID Id);
+	private ComponentType(Type type, int size)
+	{
+		Type = type;
+		Size = size;
+	}
+
+	private ComponentType(EcsID entityId)
+	{
+		Size = 0;
+		EntityId = entityId;
+	}
+
+	public static ComponentType OfEntity(EcsID entityId) => new ComponentType(entityId);
+	public static ComponentType OfCLRType(Type type, int size) => new ComponentType(type, size);
+
+	public int Size { get; }
+	public Type? Type { get; }
+	public EcsID EntityId { get; }
+	
+	public bool IsCLR => Type != null;
+	public bool IsEntityTag => EntityId != 0;
+	
 }
 
 [SkipLocalsInit]
@@ -38,7 +55,7 @@ public class Component
 		Name = name;
 		Id = id;
 		World = world;
-		Size = type.Match((t) => t.Size, (_) => 0);
+		Size = type.Size;
 		Slim = new SlimComponent(id, Size);
 		Hooks = new RawComponentHooks();
 		Creator = creator;
@@ -54,8 +71,8 @@ public class Component
 	public readonly SlimComponent Slim;
 	public readonly int Size;
 	public bool IsTag => Size == 0;
-	public bool IsValue => Type is ComponentType.CLRType;
-	public bool IsDynamic => Type is ComponentType.EntityTag;
+	public bool IsValue => Type.IsCLR;
+	public bool IsDynamic => Type.IsEntityTag;
 }
 
 public struct RawComponentHooks
@@ -90,19 +107,17 @@ public interface IHookedComponent<T>
 	}
 }
 
-public class EntityComponent : Component
-{
-	public EntityComponent(ulong id, EcsID entityId, World world) : base(new ComponentType.EntityTag(entityId), world.Entity(entityId).Name(), id, world, (_) => null) { }
-}
+public class EntityComponent(ulong id, EcsID entityId, World world) : Component(ComponentType.OfEntity(entityId), world.Entity(entityId).Name(), id, world,
+	(_) => null);
 
 /// <summary>
-/// Component<T> is a static reference to a <see cref="Component"/> type.
+/// A static reference to a <see cref="Component"/> type.
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [SkipLocalsInit]
 public class Component<T> : Component
 {
-	public Component(ulong id, World world) : base(new ComponentType.CLRType(typeof(T), StaticSize), StaticName, id, world, CreateArray)
+	public Component(ulong id, World world) : base(ComponentType.OfCLRType(typeof(T), StaticSize), StaticName, id, world, CreateArray)
 	{
 		if (typeof(T).IsAssignableTo(typeof(IHookedComponent<T>))) {
 			unsafe {
@@ -113,10 +128,12 @@ public class Component<T> : Component
 		}
 	}
 
-	public static int StaticSize = GetSize();
-	public static string StaticName = typeof(T).FullName ?? typeof(T).Name;
+	// ReSharper disable once StaticMemberInGenericType
+	public static readonly int StaticSize = GetSize();
+	// ReSharper disable once StaticMemberInGenericType
+	public static readonly string StaticName = typeof(T).FullName ?? typeof(T).Name;
 
-	public static Array? CreateArray(int count)
+	public static Array CreateArray(int count)
 	{
 		if (StaticSize == 0) {
 			return Array.Empty<T>();
@@ -142,14 +159,9 @@ public class Component<T> : Component
 	}
 }
 
-public class ComponentRegistry
+public class ComponentRegistry(World world)
 {
-	public ComponentRegistry(World world)
-	{
-		_world = world;
-	}
 	private ulong _index;
-	private World _world;
 	private readonly FastIdLookup<SlimComponent> _slimComponents = new FastIdLookup<SlimComponent>();
 	private readonly FastIdLookup<Component> _components = new FastIdLookup<Component>();
 	private readonly Dictionary<Type, EcsID> _typeToId = new Dictionary<Type, EcsID>();
@@ -163,7 +175,7 @@ public class ComponentRegistry
 		if (_typeToId.TryGetValue(typeof(T), out var id)) {
 			return id;
 		}
-		var c = new Component<T>(ClaimKey(), _world);
+		var c = new Component<T>(ClaimKey(), world);
 		_typeToId.Add(typeof(T), c.Id);
 		_slimComponents.Add(c.Id, c.Slim);
 		_components.Add(c.Id, c);
@@ -214,3 +226,4 @@ public class ComponentRegistry
 		return null;
 	}
 }
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type

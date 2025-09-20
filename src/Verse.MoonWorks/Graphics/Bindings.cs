@@ -3,11 +3,13 @@
 // The structure of these bindings are taken from SDL3.Core.
 // If SDL3.Core changes, make sure to check the changes against these bindings!
 
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using Verse.MoonWorks.Graphics.Resources;
 using SDL3;
+using Verse.ECS;
 using Buffer = Verse.MoonWorks.Graphics.Resources.Buffer;
 using SDLBool = SDL3.SDL.SDLBool;
 
@@ -372,7 +374,7 @@ public struct Rect
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct Viewport
+public struct Viewport : IDefault<Viewport>
 {
 	public float X;
 	public float Y;
@@ -396,6 +398,10 @@ public struct Viewport
 		H = h;
 		MaxDepth = 1;
 	}
+
+	public Vector2 PhysicalPosition => new Vector2(X, Y);
+	public Vector2 PhysicalSize => new Vector2(W, H);
+	public static Viewport Default() => new Viewport(0f, 0f, 1f, 1f);
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -926,7 +932,8 @@ public struct VertexInputState
 		VertexAttributes = []
 	};
 
-	public static VertexInputState CreateSingleBinding<T>(uint slot = 0, VertexInputRate inputRate = VertexInputRate.Vertex, uint stepRate = 0, uint locationOffset = 0) where T : unmanaged, IVertexType
+	public static VertexInputState CreateSingleBinding<T>(
+		uint slot = 0, VertexInputRate inputRate = VertexInputRate.Vertex, uint stepRate = 0, uint locationOffset = 0) where T : unmanaged, IVertexType
 	{
 		var description = VertexBufferDescription.Create<T>(slot, inputRate, stepRate);
 		var attributes = new VertexAttribute[T.Formats.Length];
@@ -1337,7 +1344,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial IntPtr SDL_BeginGPURenderPass(IntPtr command_buffer, Span<ColorTargetInfo> color_target_infos, uint num_color_targets, in DepthStencilTargetInfo depth_stencil_target_info);
+	public static partial IntPtr SDL_BeginGPURenderPass(
+		IntPtr command_buffer, Span<ColorTargetInfo> color_target_infos, uint num_color_targets, in DepthStencilTargetInfo depth_stencil_target_info);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1369,7 +1377,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial void SDL_BindGPUVertexSamplers(IntPtr render_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
+	public static partial void SDL_BindGPUVertexSamplers(
+		IntPtr render_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1381,7 +1390,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial void SDL_BindGPUFragmentSamplers(IntPtr render_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
+	public static partial void SDL_BindGPUFragmentSamplers(
+		IntPtr render_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1393,7 +1403,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial void SDL_DrawGPUIndexedPrimitives(IntPtr render_pass, uint num_indices, uint num_instances, uint first_index, int vertex_offset, uint first_instance);
+	public static partial void SDL_DrawGPUIndexedPrimitives(
+		IntPtr render_pass, uint num_indices, uint num_instances, uint first_index, int vertex_offset, uint first_instance);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1414,7 +1425,8 @@ public static partial class SDL_GPU
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
 	public static partial IntPtr SDL_BeginGPUComputePass(
-		IntPtr command_buffer, Span<StorageTextureReadWriteBinding> storage_texture_bindings, uint num_storage_texture_bindings, Span<StorageBufferReadWriteBinding> storage_buffer_bindings, uint num_storage_buffer_bindings);
+		IntPtr command_buffer, Span<StorageTextureReadWriteBinding> storage_texture_bindings, uint num_storage_texture_bindings,
+		Span<StorageBufferReadWriteBinding> storage_buffer_bindings, uint num_storage_buffer_bindings);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1422,7 +1434,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial void SDL_BindGPUComputeSamplers(IntPtr compute_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
+	public static partial void SDL_BindGPUComputeSamplers(
+		IntPtr compute_pass, uint first_slot, Span<TextureSamplerBinding> texture_sampler_bindings, uint num_bindings);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1466,7 +1479,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial void SDL_CopyGPUTextureToTexture(IntPtr copy_pass, in TextureLocation source, in TextureLocation destination, uint w, uint h, uint d, SDLBool cycle);
+	public static partial void SDL_CopyGPUTextureToTexture(
+		IntPtr copy_pass, in TextureLocation source, in TextureLocation destination, uint w, uint h, uint d, SDLBool cycle);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1510,7 +1524,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_SetGPUSwapchainParameters(IntPtr device, IntPtr window, SwapchainComposition swapchain_composition, PresentMode present_mode);
+	public static partial SDLBool SDL_SetGPUSwapchainParameters(
+		IntPtr device, IntPtr window, SwapchainComposition swapchain_composition, PresentMode present_mode);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1522,7 +1537,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_AcquireGPUSwapchainTexture(IntPtr command_buffer, IntPtr window, out IntPtr swapchain_texture, out uint swapchain_texture_width, out uint swapchain_texture_height);
+	public static partial SDLBool SDL_AcquireGPUSwapchainTexture(
+		IntPtr command_buffer, IntPtr window, out IntPtr swapchain_texture, out uint swapchain_texture_width, out uint swapchain_texture_height);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -1530,7 +1546,8 @@ public static partial class SDL_GPU
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-	public static partial SDLBool SDL_WaitAndAcquireGPUSwapchainTexture(IntPtr command_buffer, IntPtr window, out IntPtr swapchain_texture, out uint swapchain_texture_width, out uint swapchain_texture_height);
+	public static partial SDLBool SDL_WaitAndAcquireGPUSwapchainTexture(
+		IntPtr command_buffer, IntPtr window, out IntPtr swapchain_texture, out uint swapchain_texture_width, out uint swapchain_texture_height);
 
 	[LibraryImport(nativeLibName)]
 	[UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
