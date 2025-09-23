@@ -34,12 +34,11 @@ public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlu
 			AddSystems(Schedules.Main, FuncSystem.Of(mainSystem, "RunMainSystems")).
 			AddSystems(Schedules.FixedMain, FuncSystem.Of(fixedMainSystem, "RunFixedMainSystems")).
 			ConfigureSets(Schedules.RunFixedMainLoop,
-				// TODO this sucks. figure out a better ergonomic
-				NodeConfigs<ISystemSet>.Of([
-					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.BeforeFixedMainLoop),
-					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.FixedMainLoop),
-					EnumSet<RunFixedMainLoopSystems>.Of(RunFixedMainLoopSystems.AfterFixedMainLoop),
-				], chained: Chain.Yes));
+				SystemSet.Of(
+						RunFixedMainLoopSystems.BeforeFixedMainLoop,
+						RunFixedMainLoopSystems.FixedMainLoop,
+						RunFixedMainLoopSystems.AfterFixedMainLoop).
+					Chained());
 
 	}
 

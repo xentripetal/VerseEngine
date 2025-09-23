@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Verse.ECS.Generator;
 
-[Generator]
 public class SystemContainerGenerator : IIncrementalGenerator
 {
 	public void Initialize(IncrementalGeneratorInitializationContext context)

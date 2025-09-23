@@ -172,7 +172,7 @@ public partial class {name} : Verse.ECS.Systems.ClassSystem {{
 	{extraProps}
 
 	public override System.Collections.Generic.List<Verse.ECS.Systems.ISystemSet> GetDefaultSystemSets() {{
-		return [Set, new Verse.ECS.Systems.EnumSet<{ClassName}.Sets>({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSet<{ClassName}.Sets>({ClassName}.Sets.All)];
+		return [Set, new Verse.ECS.Systems.EnumSet({ClassName}.Sets.{system.Name}), new Verse.ECS.Systems.EnumSet({ClassName}.Sets.All)];
 	}}
 
 	public override void Initialize(World world) {{	

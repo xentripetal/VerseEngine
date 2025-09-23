@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -20,7 +21,37 @@ public static class SyntaxHelpers
 		return false;
 	}
 
-	public static bool HasMethod(this TypeDeclarationSyntax declaration, string methodName, string[] args, string returnType, CancellationToken cancel = default)
+	public static bool HasAttribute(this SyntaxList<AttributeListSyntax> attributes, string attributeName, bool includeAttributeSuffix = true, bool ignoreGenerics = true)
+	{
+		return TryGetAttribute(attributes, attributeName, out _, includeAttributeSuffix, ignoreGenerics);
+	}
+
+	public static bool TryGetAttribute(this SyntaxList<AttributeListSyntax> attributes, string attributeName, out AttributeSyntax attribute, bool includeAttributeSuffix = true, bool ignoreGenerics = true)
+	{
+		foreach (var attrSet in attributes) {
+			foreach (var attr in attrSet.Attributes) {
+				string name;
+				if (ignoreGenerics && attr.Name is GenericNameSyntax genericName) {
+					name = genericName.Identifier.Text;
+				} else {
+					name = attr.Name.ToString();
+				}
+				if (name == attributeName) {
+					attribute = attr;
+					return true;
+				}
+				if (includeAttributeSuffix && name == attributeName + "Attribute") {
+					attribute = attr;
+					return true;
+				}
+			}
+		}
+		attribute = null;
+		return false;
+	}
+
+	public static bool HasMethod(
+		this TypeDeclarationSyntax declaration, string methodName, string[] args, string returnType, CancellationToken cancel = default)
 	{
 		foreach (var mem in declaration.Members) {
 			if (mem is MethodDeclarationSyntax method && method.Identifier.ValueText == methodName) {
@@ -44,7 +75,8 @@ public static class SyntaxHelpers
 		string attributeName,
 		CancellationToken cancel = default
 	) => MethodsMatching(declaration,
-		x => x.AttributeLists.SelectMany(y => y.Attributes).Any(y => y.Name.ToString() == attributeName || y.Name.ToString() == attributeName + "Attribute"), cancel);
+		x => x.AttributeLists.SelectMany(y => y.Attributes).Any(y => y.Name.ToString() == attributeName || y.Name.ToString() == attributeName + "Attribute"),
+		cancel);
 
 	public static List<MethodDeclarationSyntax> MethodsNamed(
 		this TypeDeclarationSyntax declaration,

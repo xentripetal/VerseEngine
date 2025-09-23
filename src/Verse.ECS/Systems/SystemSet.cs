@@ -16,6 +16,21 @@ public interface ISystemSet : IEquatable<ISystemSet>, IIntoSystemSet, IIntoSyste
 	public bool IsSystemAlias();
 }
 
+/// <summary>
+/// Helpers for creating system sets from various types.
+/// </summary>
+public static class SystemSet
+{
+	public static IIntoSystemSetConfigs Of(Enum first, params Enum[] enums) => EnumSets.Of(enums.Prepend(first));
+	public static IIntoSystemSetConfigs Of(ISystem first, params ISystem[] systems) =>
+		NodeConfigs<ISystemSet>.Of(systems.Prepend(first).Select(IIntoSystemSetConfigs (x) => new SystemReferenceSet(x)));
+	public static IIntoSystemSetConfigs Of(ISystemSet first, params ISystemSet[] sets) => NodeConfigs<ISystemSet>.Of(sets.Prepend(first));
+	public static IIntoSystemSetConfigs Of(ISystemSetLabel first, params ISystemSetLabel[] labels) =>
+		NodeConfigs<ISystemSet>.Of(labels.Prepend(first).Select(IIntoSystemSetConfigs (l) => new SystemSetLabel(l)));
+	public static IIntoSystemSetConfigs Of(IIntoSystemSet first, params IIntoSystemSet[] sets) =>
+		NodeConfigs<ISystemSet>.Of(sets.Prepend(first).Select(x => x.IntoSystemSet()));
+}
+
 public readonly record struct NamedSet(string Name) : ISystemSet
 {
 	public bool IsSystemAlias() => false;
@@ -133,67 +148,29 @@ public class SystemTypeSet<T>() : SystemTypeSet(typeof(T))
 	public new ISystemSet IntoSystemSet() => this;
 }
 
-public class MethodSystemSet<T>(string Method) : ISystemSet
+public struct EnumSets(params Enum[] Sets) : IIntoSystemSetConfigs
 {
-	public bool Equals(ISystemSet? other)
-	{
-		if (other is MethodSystemSet<T> otherFn)
-			return other.GetName() == GetName();
-		return false;
-	}
-	public ISystemSet IntoSystemSet() => this;
-	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
-	public string GetName() => typeof(T).Name + $".{Method}()";
-	public bool IsSystemAlias() => true;
+	public static IIntoSystemSetConfigs Of(params Enum[] sets) => new EnumSets(sets);
+	public static IIntoSystemSetConfigs Of(IEnumerable<Enum> sets) => new EnumSets(sets.ToArray());
+	public NodeConfigs<ISystemSet> IntoConfigs() => NodeConfigs<ISystemSet>.Of(Sets.Select(EnumSet.Of));
+
+	public static implicit operator EnumSets(Enum[] sets) => new EnumSets(sets);
+	public static implicit operator EnumSets(List<Enum> sets) => new EnumSets(sets.ToArray());
 }
 
-public struct EnumSets<T>(params T[] Sets) : IIntoSystemSetConfigs where T : struct, Enum
+public class EnumSet(Enum value) : ISystemSet
 {
-	public static EnumSets<T> Of(params T[] sets) => new EnumSets<T>(sets);
-	public NodeConfigs<ISystemSet> IntoConfigs() => NodeConfigs<ISystemSet>.Of(Sets.Select(EnumSet<T>.Of));
-	
-	// re-export all the interface methods from IIntoSystemConfigs to make it easier to chain them
-	#region IIntoSystemConfigs
-	public NodeConfigs<ISystemSet> InSet(IIntoSystemSet set) => IntoConfigs().InSet(set);
+	public static ISystemSet Of(Enum set) => new EnumSet(set);
+	public static IIntoSystemSetConfigs Of(params Enum[] sets) => new EnumSets(sets);
 
-	public NodeConfigs<ISystemSet> InSet<ISystemSetEnum>(ISystemSetEnum set) where ISystemSetEnum : struct, Enum => IntoConfigs().InSet(set);
+	public static implicit operator EnumSet(Enum value) => new EnumSet(value);
+	public static implicit operator Enum(EnumSet set) => set.Value;
 
-	public NodeConfigs<ISystemSet> Before(IIntoSystemSet set) => IntoConfigs().Before(set);
-
-	public NodeConfigs<ISystemSet> After(IIntoSystemSet set) => IntoConfigs().After(set);
-
-	public NodeConfigs<ISystemSet> BeforeIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().BeforeIgnoreDeferred(set);
-
-	public NodeConfigs<ISystemSet> AfterIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().AfterIgnoreDeferred(set);
-
-	public NodeConfigs<ISystemSet> Chained() => IntoConfigs().Chained();
-
-	public NodeConfigs<ISystemSet> ChainedIgnoreDeferred() => IntoConfigs().ChainedIgnoreDeferred();
-
-	public NodeConfigs<ISystemSet> RunIf(ICondition condition) => IntoConfigs().RunIf(condition);
-
-	public NodeConfigs<ISystemSet> DistributiveRunIf(ICondition condition) => IntoConfigs().DistributiveRunIf(condition);
-
-	public NodeConfigs<ISystemSet> AmbiguousWith(IIntoSystemSet set) => IntoConfigs().AmbiguousWith(set);
-
-	public NodeConfigs<ISystemSet> AmbiguousWithAll() => IntoConfigs().AmbiguousWithAll();
-	#endregion
-}
-
-public class EnumSet<T> : ISystemSet where T : struct, Enum
-{
-	public EnumSet(T set)
-	{
-		Value = set;
-	}
-
-	public static EnumSet<T> Of(T set) => new (set);
-
-	public T Value { get; }
+	public Enum Value { get; } = value;
 
 	public bool Equals(ISystemSet? other)
 	{
-		if (other is EnumSet<T> otherEnum) {
+		if (other is EnumSet otherEnum) {
 			return Value.Equals(otherEnum.Value);
 		}
 		return false;
@@ -201,7 +178,7 @@ public class EnumSet<T> : ISystemSet where T : struct, Enum
 
 	public ISystemSet IntoSystemSet() => this;
 
-	public string GetName() => $"{typeof(T).Name}({Enum.GetName(Value)})";
+	public string GetName() => Value.ToString();
 
 	public bool IsSystemAlias() => false;
 	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
@@ -223,4 +200,17 @@ public abstract class StaticSystemSet : ISystemSet
 	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
 
 	public override int GetHashCode() => GetType().GetHashCode();
+}
+
+public interface ISystemSetLabel : ILabel { }
+
+public class SystemSetLabel(ISystemSetLabel label) : ISystemSet
+{
+	public readonly ISystemSetLabel Label = label;
+	public bool Equals(ISystemSet? other) => other is SystemSetLabel l && l.Label.Equals(Label);
+	public ISystemSet IntoSystemSet() => this;
+	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
+	public string GetName() => label.GetLabelName();
+	public bool IsSystemAlias() => false;
+	public override int GetHashCode() => Label.GetHashCode();
 }

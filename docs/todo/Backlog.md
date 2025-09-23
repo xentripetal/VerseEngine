@@ -4,6 +4,8 @@
   - [ ] Add FromWorld trait and use it for resource init
   - [ ] Should we even allow null resources?
   - [ ] Fix codegen calling everything resmut and bypassing value checks
+- [ ] Rewrite ECS Generator to not be so messy
+- [ ] Convert Schedule labels to actually using labels
 - [x] SubApps
 - [ ] Allow marking components that don't need apply deferred (Res/Commands)
 - [ ] Required components

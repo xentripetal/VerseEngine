@@ -8,6 +8,10 @@
     "GenMoonWorks": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "../../../src/Verse.MoonWorks/Verse.MoonWorks.csproj"
+    },
+    "GenRender": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../../../src/Verse.Render/Verse.Render.csproj"
     }
   }
 }

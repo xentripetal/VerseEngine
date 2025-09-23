@@ -3,20 +3,7 @@ using Verse.ECS.Systems;
 
 namespace Verse.ECS.Scheduling.Configs;
 
-public abstract class SystemConfigs : NodeConfigs<ISystem> { }
 
-public abstract class SetConfigs : NodeConfigs<ISystemSet>
-{
-    public static NodeConfigs<ISystemSet> Of<T>(params T[] sets) where T : struct, Enum
-    {
-        var convertedSets = new IIntoNodeConfigs<ISystemSet>[sets.Length];
-        for (var i = 0; i < sets.Length; i++)
-        {
-            convertedSets[i] = new EnumSet<T>(sets[i]);
-        }
-        return NodeConfigs<ISystemSet>.Of(convertedSets);
-    }
-}
 
 /// <summary>
 ///     A collection of generic <see cref="NodeConfig{T}" />s
@@ -38,7 +25,7 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
     /// </summary>
     /// <param name="set"></param>
     /// <typeparam name="TEnum"></typeparam>
-    public NodeConfigs<T> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => InSet(new EnumSet<TEnum>(set));
+    public NodeConfigs<T> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => InSet(new EnumSet(set));
 
     public abstract NodeConfigs<T> Before(IIntoSystemSet set);
 
@@ -62,7 +49,9 @@ public abstract class NodeConfigs<T> : IIntoNodeConfigs<T>
 
     public static NodeConfigs<T> Of(NodeConfig<T> config) => new Node(config);
 
+    public static NodeConfigs<T> Of(IEnumerable<IIntoNodeConfigs<T>> configs) => Of(configs, null, Chain.No);
     public static NodeConfigs<T> Of(params IIntoNodeConfigs<T>[] configs) => Of(configs, null, Chain.No);
+    
     
     public static NodeConfigs<T> Of(IEnumerable<IIntoNodeConfigs<T>> configs, ICondition[]? collectiveConditions = null, Chain chained = Chain.No)
     {

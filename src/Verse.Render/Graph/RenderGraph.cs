@@ -403,14 +403,19 @@ public interface IRenderLabel : IEquatable<IRenderLabel> { }
 /// <summary>
 /// A strongly-typed class of labels used to identify a subgraph for <see cref="RenderGraph"/>
 /// </summary>
-public interface ISubgraphLabel : IEquatable<ISubgraphLabel> { }
+public interface ISubgraphLabel : ILabel
+{
+}
 
 public static class EnumExtensions
 {
 	public static IRenderLabel AsRenderLabel(this Enum value) => new EnumRenderLabel(value);
 }
 
-public readonly struct EnumRenderLabel(Enum value) : IRenderLabel 
+[Label<ISubgraphLabel>]
+public partial struct ExampleLabel { }
+
+public readonly struct EnumRenderLabel(Enum value) : IRenderLabel
 {
 	public readonly Enum Value = value;
 	public bool Equals(EnumRenderLabel other) => other.Value.Equals(Value);

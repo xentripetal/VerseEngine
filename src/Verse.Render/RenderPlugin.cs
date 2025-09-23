@@ -68,7 +68,7 @@ public partial class RenderPlugin : IPlugin
 	public static Schedule BaseRenderSchedule()
 	{
 		var schedule = new Schedule(RenderSchedules.Render);
-		schedule.ConfigureSets(EnumSets<RenderSets>.Of(
+		schedule.ConfigureSets(SystemSet.Of(
 			RenderSets.ExtractCommands,
 			RenderSets.PrepareMeshes,
 			RenderSets.ManageViews,
@@ -79,21 +79,21 @@ public partial class RenderPlugin : IPlugin
 			RenderSets.Cleanup,
 			RenderSets.PostCleanup).Chained());
 
-		schedule.ConfigureSets(EnumSets<RenderSets>.Of(
+		schedule.ConfigureSets(SystemSet.Of(
 			RenderSets.ExtractCommands,
 			RenderSets.PrepareAssets,
 			RenderSets.PrepareMeshes,
 			RenderSets.Prepare
 		).Chained());
 
-		schedule.ConfigureSets(EnumSets<RenderSets>.Of(
+		schedule.ConfigureSets(SystemSet.Of(
 			RenderSets.QueueMeshes,
 			RenderSets.QueueSweep
 		).Chained().InSet(RenderSets.Queue));
 		// TODO We don't have this yet but bevy does it.
 		//.After(PrepareAssets<RenderMesh>))
 
-		schedule.ConfigureSets(EnumSets<RenderSets>.Of(
+		schedule.ConfigureSets(SystemSet.Of(
 			RenderSets.PrepareResources,
 			RenderSets.PrepareResourcesCollectPhaseBuffers,
 			RenderSets.PrepareResourcesFlush,

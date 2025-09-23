@@ -4,12 +4,13 @@ using Verse.MoonWorks.Graphics.Resources;
 using Verse.Render.Graph;
 using Verse.Render.View;
 
-namespace Verse.Render._2DPipeline;
+namespace Verse.Render.Pipeline2D;
 
 public class OpaquePass2DNode : IViewRenderNode<Empty>
 {
 	public OpaquePass2DNode(GraphicsDevice device)
 	{
+		/**
 		var info = new GraphicsPipelineCreateInfo
 		{
 			TargetInfo = new GraphicsPipelineTargetInfo
@@ -33,6 +34,8 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 		};
 		pipelineCreateInfo.VertexInputState = VertexInputState.CreateSingleBinding<PositionTextureVertex>();
 		_pipeline = GraphicsPipeline.Create(GraphicsDevice, pipelineCreateInfo);	
+		
+		**/
 	}
 
 	public void Run(RenderGraphContext context, RenderContext renderContext, World world, EntityView viewEntity)
@@ -58,6 +61,7 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 			var renderPass = buffer.BeginRenderPass(
 				new ColorTargetInfo(targetTexture, Color.CornflowerBlue)
 			);
+			/**
 			// iterate over each bind group
 			renderPass.BindGraphicsPipeline(_pipeline);
 			renderPass.BindVertexBuffers(vertexBuffer);
@@ -65,7 +69,7 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 			renderPass.BindFragmentSamplers(new TextureSamplerBinding(testTex, samplers[samplerIndex]));
 			// submit all batches in that bind group
 			renderPass.DrawIndexedPrimitives(6, 1, 0, 0, 0);
-			
+			**/
 			buffer.EndRenderPass(renderPass);
 			
 			return buffer;

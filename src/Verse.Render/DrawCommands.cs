@@ -83,6 +83,7 @@ public class SortedRenderPhase<T> where T : IPhaseItem
     }
 }
 
+/**
 /// <summary>
 /// Represents a render phase that bins items for efficient batching
 /// </summary>
@@ -138,7 +139,7 @@ public class BinnedRenderPhase<T, TBinKey> where T : IPhaseItem where TBinKey : 
             }
         }
     }
-}
+}**/
 
 /// <summary>
 /// Interface for draw functions that can render phase items

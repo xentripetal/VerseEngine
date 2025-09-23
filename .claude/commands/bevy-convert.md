@@ -63,8 +63,8 @@ be added to context
 ### 7. Documentation
 
 - Maintain semantic equivalence with Bevy documentation. Have an initial short summary and add additional details as
-  remarks
-  or other relevant xmldoc tags.
+  remarks or other relevant xmldoc tags.
+- Any markdown lists in bevy docs should be converted to xmldoc lists.
 - Reference the original Bevy component as a <remarks> comment.
 - Document any C#-specific adaptations or differences from the Rust version
 - Include usage examples in XML docs
