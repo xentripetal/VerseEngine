@@ -127,12 +127,20 @@ public class IndexDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnl
 		return Remove(item.Key);
 	}
 
-	public bool SwapRemove(TKey key)
+	public (TKey, TValue)? SwapRemoveIndex(int index)
+	{
+		if (index < 0 || index >= _entries.Count)
+			throw new ArgumentOutOfRangeException(nameof(index));
+		return SwapRemove(_entries[index].Key);
+	}
+
+	public (TKey, TValue)? SwapRemove(TKey key)
 	{
 		if (!_keyToIndex.TryGetValue(key, out int index))
-			return false;
+			return null;
 
 		_keyToIndex.Remove(key);
+		var value = _entries[index].Value;
 
 		if (index == _entries.Count - 1) {
 			_entries.RemoveAt(index);
@@ -143,7 +151,7 @@ public class IndexDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnl
 			_keyToIndex[lastEntry.Key] = index;
 		}
 
-		return true;
+		return (key, value);
 	}
 
 	public bool ContainsKey(TKey key)
@@ -218,16 +226,14 @@ public class IndexDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnl
 		return (entry.Key, entry.Value, index);
 	}
 
-	public bool TryGetFull(TKey key, out TKey outKey, out TValue value, out int index)
+	public bool TryGetFull(TKey key, out TValue value, out int index)
 	{
 		if (_keyToIndex.TryGetValue(key, out index)) {
 			var entry = _entries[index];
-			outKey = entry.Key;
 			value = entry.Value;
 			return true;
 		}
 
-		outKey = default!;
 		value = default!;
 		index = -1;
 		return false;

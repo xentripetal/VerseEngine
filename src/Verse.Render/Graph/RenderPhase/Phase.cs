@@ -246,7 +246,9 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	{
 		var functions = world.GetRes<DrawFunctions<TBinnedPhaseItem>>();
 		if (functions.HasValue) functions.Value.Prepare(world);
-
+		RenderBatchableMeshes(pass, world, view);
+		RenderUnbatchableMeshes(pass, world, view);
+		RenderNonMeshes(pass, world, view);
 	}
 
 	private void RenderBatchableMeshes(RenderPass pass, World world, EntityView view)
@@ -277,6 +279,94 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 		}
 	}
 
+	private void RenderUnbatchableMeshes(RenderPass pass, World world, EntityView view)
+	{
+		var drawFunctions = world.MustGetResMut<DrawFunctions<TBinnedPhaseItem>>().Value!;
+
+		foreach (var kvp in UnbatchableMeshes) {
+			var (batchSetKey, binKey) = kvp.Key;
+			var unbatchableEntities = kvp.Value;
+
+			var entityIndex = 0;
+			foreach (var entityKvp in unbatchableEntities.Entities) {
+				var mainEntity = entityKvp.Key;
+				var entity = entityKvp.Value;
+
+				UnbatchableBinnedEntityIndices unbatchableDynamicOffset;
+				switch (unbatchableEntities.BufferIndices) {
+					case UnbatchableBinnedEntityIndexSet.NoEntities:
+						// Shouldn't happen…
+						entityIndex++;
+						continue;
+					case UnbatchableBinnedEntityIndexSet.Sparse sparse:
+						var startIndex = sparse.InstanceRange.Start.IsFromEnd
+							? throw new InvalidOperationException("Cannot use FromEnd index for sparse ranges")
+							: (uint)sparse.InstanceRange.Start.Value;
+						unbatchableDynamicOffset = new UnbatchableBinnedEntityIndices(
+							startIndex + (uint)entityIndex,
+							new PhaseItemExtraIndex.IndirectParametersIndex(
+								new Range((int)(sparse.FirstIndirectParametersIndex + (uint)entityIndex),
+								          (int)(sparse.FirstIndirectParametersIndex + (uint)entityIndex + 1)),
+								null)
+						);
+						break;
+					case UnbatchableBinnedEntityIndexSet.Dense dense:
+						unbatchableDynamicOffset = dense.Indices[entityIndex];
+						break;
+					default:
+						throw new InvalidOperationException("Unknown UnbatchableBinnedEntityIndexSet type");
+				}
+
+				var binnedPhaseItem = TBinnedPhaseItem.Create(
+					batchSetKey,
+					binKey,
+					(entity, mainEntity),
+					new Range((int)unbatchableDynamicOffset.InstanceIndex, (int)(unbatchableDynamicOffset.InstanceIndex + 1)),
+					unbatchableDynamicOffset.ExtraIndex
+				);
+
+				var drawFunction = drawFunctions.Get(binnedPhaseItem.DrawFunction);
+				if (drawFunction == null) {
+					entityIndex++;
+					continue;
+				}
+
+				drawFunction.Draw(world, pass, view, ref binnedPhaseItem);
+				entityIndex++;
+			}
+		}
+	}
+
+	private void RenderNonMeshes(RenderPass pass, World world, EntityView view)
+	{
+		var drawFunctions = world.MustGetResMut<DrawFunctions<TBinnedPhaseItem>>().Value!;
+
+		foreach (var kvp in NonMeshItems) {
+			var (batchSetKey, binKey) = kvp.Key;
+			var nonMeshEntities = kvp.Value;
+
+			foreach (var entityKvp in nonMeshEntities.Entities) {
+				var mainEntity = entityKvp.Key;
+				var entity = entityKvp.Value;
+
+				// Come up with a fake batch range and extra index. The draw
+				// function is expected to manage any sort of batching logic itself.
+				var binnedPhaseItem = TBinnedPhaseItem.Create(
+					batchSetKey,
+					binKey,
+					(entity, mainEntity),
+					new Range(0, 1),
+					new PhaseItemExtraIndex.None()
+				);
+
+				var drawFunction = drawFunctions.Get(binnedPhaseItem.DrawFunction);
+				if (drawFunction == null) continue;
+
+				drawFunction.Draw(world, pass, view, ref binnedPhaseItem);
+			}
+		}
+	}
+
 	/// <summary>
 	/// Returns true if this render phase is empty.
 	/// </summary>
@@ -296,10 +386,128 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 		validCachedEntityBinKeys.EnsureCapacity(cachedEntityBinKeys.Count);
 		entitiesThatChangedBins.Clear();
 		foreach (var mesh in UnbatchableMeshes.Values) {
-			mesh.BufferIndices.Clear();
+			mesh.BufferIndices = mesh.BufferIndices.Clear();
 		}
-		UnbatchableMeshes.
 	}
+
+	/// <summary>
+	/// Checks to see whether the entity is in a bin and returns true if it's both in a bin and up to date.
+	/// </summary>
+	/// <remarks>
+	/// If this function returns true, we also add the entry to the <see cref="validCachedEntityBinKeys"/> list
+	/// </remarks>
+	public bool ValidateCachedEntity(MainEntity visibleEntity, uint CurrentChangeTick)
+	{
+		if (!cachedEntityBinKeys.TryGetFull(visibleEntity, out var cachedEntityBinnedEntity, out var index)) {
+			return false;
+		}
+		if (cachedEntityBinnedEntity.ChangeTick == CurrentChangeTick) {
+			validCachedEntityBinKeys.Set(index);
+			return true;
+		}
+		return false;
+	}
+
+	/// <summary>
+	/// Removes all entities not marked as clean from the bins.
+	///</summary>
+	/// <remarks>
+	/// During `queue_material_meshes`, we process all visible entities and mark
+	/// each as clean as we come to it. Then, in [`sweep_old_entities`], we call
+	/// this method, which removes entities that aren't marked as clean from the
+	/// bins.
+	/// </remarks>
+	public void SweepOldEntities()
+	{
+		// Search for entities not marked as valid. We have to this in reverse order because SwapRemoveIndex will potentially
+		// invalidate all indices after the one we remove
+		foreach (var index in validCachedEntityBinKeys.ZerosReverse()) {
+			var existing = cachedEntityBinKeys.SwapRemoveIndex(index);
+			if (!existing.HasValue) continue;
+			var (entity, cachedBinnedEntity) = existing.Value;
+			var cachedBinKey = cachedBinnedEntity.CachedBinKey;
+			if (cachedBinKey.HasValue) {
+				RemoveEntityFromBin(entity, cachedBinKey.Value);
+			}
+		}
+
+		// If an entity changed bins, we need to remove it from its old bin
+		foreach (var entityThatChangedBins in entitiesThatChangedBins) {
+			var (entity, oldCachedBinnedEntity) = entityThatChangedBins;
+			var oldCachedBinKey = oldCachedBinnedEntity.CachedBinKey;
+			if (oldCachedBinKey.HasValue) {
+				RemoveEntityFromBin(entity, oldCachedBinKey.Value);
+			}
+		}
+		entitiesThatChangedBins.Clear();
+	}
+
+	/// <summary>
+	/// Removes an entity from a bin
+	/// </summary>
+	/// <remarks>If this makes the bin empty, this function removes the bin as well</remarks>
+	private void RemoveEntityFromBin(MainEntity entity, CachedBinKey<TBinKey, TBatchSetKey> entityBinKey)
+	{
+		switch (entityBinKey.PhaseType) {
+			case BinnedRenderPhaseType.MultidrawableMesh:
+				if (MultidrawableMeshes.TryGetValue(entityBinKey.BatchSetKey, out var batchSet)) {
+					if (batchSet.TryGetValue(entityBinKey.BinKey, out var bin)) {
+						bin.Remove(entity);
+
+						// If the bin is now empty, remove the bin
+						if (bin.IsEmpty) {
+							batchSet.SwapRemove(entityBinKey.BinKey);
+						}
+					}
+
+					// If the batch set is now empty, remove it
+					if (batchSet.Count == 0) {
+						MultidrawableMeshes.SwapRemove(entityBinKey.BatchSetKey);
+					}
+				}
+				break;
+
+			case BinnedRenderPhaseType.BatchableMesh:
+				var batchableKey = (entityBinKey.BatchSetKey, entityBinKey.BinKey);
+				if (BatchableMeshes.TryGetValue(batchableKey, out var batchableBin)) {
+					batchableBin.Remove(entity);
+
+					// If the bin is now empty, remove the bin
+					if (batchableBin.IsEmpty) {
+						BatchableMeshes.SwapRemove(batchableKey);
+					}
+				}
+				break;
+
+			case BinnedRenderPhaseType.UnbatchableMesh:
+				var unbatchableKey = (entityBinKey.BatchSetKey, entityBinKey.BinKey);
+				if (UnbatchableMeshes.TryGetValue(unbatchableKey, out var unbatchableBin)) {
+					unbatchableBin.Entities.Remove(entity);
+
+					// If the bin is now empty, remove the bin
+					if (unbatchableBin.Entities.Count == 0) {
+						UnbatchableMeshes.SwapRemove(unbatchableKey);
+					}
+				}
+				break;
+
+			case BinnedRenderPhaseType.NonMesh:
+				var nonMeshKey = (entityBinKey.BatchSetKey, entityBinKey.BinKey);
+				if (NonMeshItems.TryGetValue(nonMeshKey, out var nonMeshBin)) {
+					nonMeshBin.Entities.Remove(entity);
+
+					// If the bin is now empty, remove the bin
+					if (nonMeshBin.Entities.Count == 0) {
+						NonMeshItems.SwapRemove(nonMeshKey);
+					}
+				}
+				break;
+
+			default:
+				throw new ArgumentOutOfRangeException();
+		}
+	}
+
 }
 
 /// <summary>
@@ -339,7 +547,7 @@ public sealed class RenderBin
 	/// </summary>
 	public bool Remove(MainEntity entityToRemove)
 	{
-		return Entities.Remove(entityToRemove);
+		return Entities.SwapRemove(entityToRemove).HasValue;
 	}
 
 	/// <summary>
@@ -604,7 +812,7 @@ public interface IPhaseItem
 /// A batch set is a set of meshes that can potentially be multi-drawn together.
 /// Based on Bevy's PhaseItemBatchSetKey trait.
 /// </remarks>
-public interface IPhaseItemBatchSetKey : IComparable<IPhaseItemBatchSetKey>, IEquatable<IPhaseItemBatchSetKey>
+public interface IPhaseItemBatchSetKey 
 {
 	/// <summary>
 	/// Returns true if this batch set key describes indexed meshes or false if
@@ -720,11 +928,16 @@ public abstract record UnbatchableBinnedEntityIndexSet
 	public record Sparse(Range InstanceRange, uint FirstIndirectParametersIndex) : UnbatchableBinnedEntityIndexSet;
 	public record Dense(List<UnbatchableBinnedEntityIndices> Indices) : UnbatchableBinnedEntityIndexSet;
 
-	public void Clear()
+	public UnbatchableBinnedEntityIndexSet Clear()
 	{
 		if (this is Sparse sparse) {
-			this = new NoEntities();
+			return new NoEntities();
 		}
+		if (this is Dense dense) {
+			dense.Indices.Clear();
+			return this;
+		}
+		return this;
 	}
 }
 

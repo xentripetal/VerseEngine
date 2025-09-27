@@ -2,6 +2,7 @@ using Verse.ECS;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
 using Verse.Render.Graph;
+using Verse.Render.Graph.RenderPhase;
 using Verse.Render.View;
 
 namespace Verse.Render.Pipeline2D;
@@ -44,6 +45,8 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 		var view = viewEntity.Get<ExtractedView>();
 		var target = viewEntity.Get<ViewTargetTexture>();
 		var depth = viewEntity.Get<ViewDepthTexture>();
+		
+		var opaquePhases = world.GetRes<ViewBinnedRenderPhases<Opaque2D>>()
 		
 		renderContext.AddCommandBufferFunc(device => {
 			var buffer = device.AcquireCommandBuffer();

@@ -3,6 +3,8 @@ using Verse.MoonWorks.Graphics;
 
 namespace Verse.Render.Graph.RenderPhase;
 
+public record struct DrawFunctionId(uint Id);
+
 public interface IDrawFunction<T> where T : IPhaseItem
 {
 	public void Prepare(World world) {}

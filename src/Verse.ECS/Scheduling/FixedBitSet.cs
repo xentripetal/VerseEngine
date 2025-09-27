@@ -151,6 +151,31 @@ public struct FixedBitSet : IEquatable<FixedBitSet>, IEnumerable<ulong>
 	/// Iterates over all enabled bits.
 	///
 	/// Iterator element is the index of the `1` bit, type `usize`.
+	public IEnumerable<int> Zeros()
+	{
+		int il = Length;
+		for (var i = 0; i < il; i++) {
+			if (!_data![i]) {
+				yield return i;
+			}
+		}
+	}
+	
+	/// Iterates over all disabled bits in reverse order.
+	///
+	/// Iterator element is the index of the `0` bit, type `usize`.
+	public IEnumerable<int> ZerosReverse()
+	{
+		for (var i = Length-1; i >= 0; i--) {
+			if (!_data![i]) {
+				yield return i;
+			}
+		}
+	}
+	
+	/// Iterates over all enabled bits.
+	///
+	/// Iterator element is the index of the `1` bit, type `usize`.
 	public IEnumerable<ulong> OnesUL()
 	{
 		int il = Length;
