@@ -103,7 +103,7 @@ public class Schedule
 	{
 		Initialize(scheduleWorld);
 		// TODO resource system to get skip systems
-		Executor.Run(Executable, scheduleWorld, null, scheduleWorld.CurTick);
+		Executor.Run(Executable, scheduleWorld, null);
 	}
 
 	public void Initialize(World scheduleWorld)

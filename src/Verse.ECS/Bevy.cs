@@ -444,6 +444,36 @@ public sealed class EventWriter<T> : ISystemParam, IIntoSystemParam<EventWriter<
 	public bool Ready(ISystem system, World world) => true;
 }
 
+
+
+public class Messages<T>
+{
+	private List<T> current;
+	private List<T> previous;
+
+	public void Update()
+	{
+		var tmp = previous;
+		previous = current;
+		current = previous;
+		current.Clear();
+	}
+
+	public void Add(params T[] items)
+	{
+		current.AddRange(items);
+	}
+}
+
+public class MessageReader<T> : ISystemParam, IIntoSystemParam<EventReader<T>> where T : notnull
+{
+	public void Init(ISystem system, World world)
+	{
+	}
+	public bool Ready(ISystem system, World world) => throw new NotImplementedException();
+	public static EventReader<T> Generate(World world) => throw new NotImplementedException();
+}
+
 public sealed class EventReader<T> : ISystemParam, IIntoSystemParam<EventReader<T>> where T : notnull
 {
 	private readonly List<T> _events;
@@ -708,8 +738,6 @@ public class Res<T> : ISystemParam, IIntoSystemParam<Res<T>>
 
 	public ref readonly T Value => ref _res.Value!;
 
-	public bool HasValue => _res.HasValue;
-
 	public void Init(ISystem system, World world)
 	{
 		var c = world.GetComponent<Placeholder<ResMut<T>>>();
@@ -717,15 +745,12 @@ public class Res<T> : ISystemParam, IIntoSystemParam<Res<T>>
 	}
 	public bool Ready(ISystem system, World world)
 	{
-		return _res.HasValue;
+		return true;
 	}
 
 	public static Res<T> Generate(World world)
 	{
-		if (world.Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
-			return new (world.Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
-		var res = new ResMut<T>();
-		world.Entity<Placeholder<ResMut<T>>>().Set(new Placeholder<ResMut<T>> { Value = res });
+		var res = ResMut<T>.Generate(world);
 		return new (res);
 	}
 }

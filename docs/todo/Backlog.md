@@ -2,6 +2,7 @@
 - [ ] Add State
 - [ ] Flesh out Res behavior
   - [ ] Add FromWorld trait and use it for resource init
+    - If we do this, add a secondary option for a : new() generic type?
   - [ ] Should we even allow null resources?
   - [ ] Fix codegen calling everything resmut and bypassing value checks
 - [ ] Rewrite ECS Generator to not be so messy

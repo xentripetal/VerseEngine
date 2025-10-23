@@ -46,7 +46,7 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 		var target = viewEntity.Get<ViewTargetTexture>();
 		var depth = viewEntity.Get<ViewDepthTexture>();
 		
-		var opaquePhases = world.GetRes<ViewBinnedRenderPhases<Opaque2D>>()
+		//var opaquePhases = world.GetRes<ViewBinnedRenderPhases<Opaque2D>>()
 		
 		renderContext.AddCommandBufferFunc(device => {
 			var buffer = device.AcquireCommandBuffer();

@@ -29,15 +29,63 @@ public sealed class AssetHandleProvider
 		return new UntypedHandle(GetHandle(new AssetIndexOrGuid(index), false, null, null));
 	}
 
-	public StrongHandle GetHandle(AssetIndexOrGuid id, bool assetServerManaged, string? path, Action<IAssetMeta>? metaTransform)
+	public StrongHandle GetHandle(AssetIndexOrGuid id, bool assetServerManaged, AssetPath? path, Action<IAssetMeta>? metaTransform)
 	{
 		return new StrongHandle(id.Untyped(Type), assetServerManaged, path, DropWriter, metaTransform);
 	}
 
-	internal StrongHandle ReserveHandleInternal(bool assetServerManaged, string? path, Action<IAssetMeta>? metaTransform)
+	internal StrongHandle ReserveHandleInternal(bool assetServerManaged, AssetPath? path, Action<IAssetMeta>? metaTransform)
 	{
 		var index = Allocator.Reserve();
 		return GetHandle(new AssetIndexOrGuid(index), assetServerManaged, path, metaTransform);
+	}
+}
+
+/// <summary>
+/// StrongHandleOrGuid is a container for either a <see cref="StrongHandle"/> or a <see cref="Guid"/>.
+/// </summary>
+/// <remarks>
+/// This is used in <see cref="Handle{T}"/> and <see cref="UntypedHandle"/> for an explicit layout type since you cannot
+/// use StructLayouts on generic types
+/// </remarks>
+/// <remarks>
+/// Doesn't actually use struct layouts for emmory optization since you cant mix reference types with structs for now.
+/// Waiting on DU support in C#15
+/// </remarks>
+public record struct StrongHandleOrGuid : IComparable<StrongHandleOrGuid>
+{
+	private struct HandleHolder
+	{
+		public StrongHandle Handle;
+	}
+
+	private readonly Guid _guid;
+	private readonly HandleHolder _handle;
+	private readonly ulong _padding;
+
+	public StrongHandleOrGuid(Guid guid)
+	{
+		_guid = guid;
+	}
+
+	public StrongHandleOrGuid(StrongHandle handle)
+	{
+		_padding = 0;
+		_handle = new HandleHolder {
+			Handle = handle
+		};
+	}
+
+	public bool IsGuid => _padding != 0;
+	public StrongHandle AsHandle => IsGuid ? throw new InvalidOperationException("StrongHandleOrGuid contains a Guid, not a StrongHandle") : _handle.Handle;
+	public Guid AsGuid => IsGuid ? _guid : throw new InvalidOperationException("StrongHandleOrGuid contains a StrongHandle, not a Guid");
+
+	public int CompareTo(StrongHandleOrGuid other) => _guid.CompareTo(other._guid);
+	public bool Equals(StrongHandleOrGuid other) => _guid.Equals(other._guid);
+
+	public override int GetHashCode()
+	{
+		return _guid.GetHashCode();
 	}
 }
 
@@ -54,25 +102,25 @@ public sealed class AssetHandleProvider
 /// </para>
 /// </remarks>
 /// <typeparam name="T"></typeparam>
-[StructLayout(layoutKind: LayoutKind.Explicit)]
 public struct Handle<T> : IVisitAssetDependencies
 	where T : IAsset
 {
 	public Handle(StrongHandle handle)
 	{
-		_padding = 0;
-		_strongHandle = handle;
+		_handle = new StrongHandleOrGuid(handle);
 	}
 
 	public Handle(Guid guid)
 	{
-		_guid = guid;
+		_handle = new StrongHandleOrGuid(guid);
 	}
 
+	public Handle(StrongHandleOrGuid handle)
+	{
+		_handle = handle;
+	}
 
-	[FieldOffset(0)] private readonly Guid _guid;
-	[FieldOffset(0)] private readonly StrongHandle _strongHandle;
-	[FieldOffset(8)] private readonly ulong _padding;
+	private StrongHandleOrGuid _handle;
 
 	public void VisitDependencies(Action<UntypedAssetId> visit)
 	{
@@ -82,34 +130,28 @@ public struct Handle<T> : IVisitAssetDependencies
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public AssetId<T> Id()
 	{
-		if (IsGuid()) {
-			return new AssetId<T>(_guid);
-		}
-		return _strongHandle.Id.TypedUnchecked<T>();
+		return _handle.IsGuid ? new AssetId<T>(_handle.AsGuid) : _handle.AsHandle.Id.TypedUnchecked<T>();
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public string? Path()
+	public AssetPath? Path()
 	{
-		if (IsGuid()) {
-			return null;
-		}
-		return _strongHandle.Path;
+		return IsGuid() ? null : _handle.AsHandle.Path;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public bool IsGuid() => _padding != 0;
+	public bool IsGuid() => _handle.IsGuid;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public bool IsStrong() => _padding == 0;
+	public bool IsStrong() => !_handle.IsGuid;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public UntypedHandle Untyped()
 	{
 		if (IsGuid()) {
-			return new UntypedHandle(typeof(T), _guid);
+			return new UntypedHandle(typeof(T), _handle.AsGuid);
 		}
-		return new UntypedHandle(_strongHandle);
+		return new UntypedHandle(_handle.AsHandle);
 	}
 }
 
@@ -119,44 +161,42 @@ public struct Handle<T> : IVisitAssetDependencies
 /// to be stored teogether and compared
 /// </summary>
 /// <seealso cref="Handle{T}"/>
-[StructLayout(LayoutKind.Explicit)]
-public struct UntypedHandle
+public struct UntypedHandle : IIntoUntypedAssetId
 {
 	public UntypedHandle(Type type, Guid guid)
 	{
-		_guid = guid;
-		_padding = 0;
+		_handle = new StrongHandleOrGuid(guid);
 		Type = type;
 	}
 
 	public UntypedHandle(StrongHandle handle)
 	{
-		_padding = 0;
-		_strongHandle = handle;
+		_handle = new StrongHandleOrGuid(handle);
 		Type = handle.Id.Type;
 	}
-	[FieldOffset(0)] private readonly Guid _guid;
-	[FieldOffset(0)] private readonly StrongHandle _strongHandle; // stored as a pointer, assume x64
-	[FieldOffset(8)] private ulong _padding;
-	[FieldOffset(16)] public readonly Type Type;
+	private readonly StrongHandleOrGuid _handle;
+	public readonly Type Type;
 
-	public UntypedAssetId Id()
+	public readonly UntypedAssetId Id()
 	{
-		if (_padding == 0) {
-			return _strongHandle.Id;
-		}
-		return new UntypedAssetId(Type, _guid);
+		return _handle.IsGuid ? new UntypedAssetId(Type, _handle.AsGuid) : _handle.AsHandle.Id;
 	}
 
 	public bool IsStrong()
 	{
-		return _padding == 0;
+		return !_handle.IsGuid;
 	}
 
 	public bool IsGuid()
 	{
-		return _padding != 0;
+		return _handle.IsGuid;
 	}
+
+	public Handle<T> Typed<T>() where T : IAsset
+	{
+		return new Handle<T>(_handle);
+	}
+	public UntypedAssetId IntoUntypedAssetId() => Id();
 }
 
 public record struct DropEvent(AssetIndexOrGuid AssetId, bool IsAssetServerManaged);
@@ -165,9 +205,9 @@ public record struct DropEvent(AssetIndexOrGuid AssetId, bool IsAssetServerManag
 /// The internal <see cref="IAsset"/> handle storage. When this is garbage collected, the <see cref="IAsset"/> will be freed.
 /// It also stores some asset metadata for easy access from handles.
 /// </summary>
-public class StrongHandle
+public class StrongHandle : IIntoUntypedAssetId
 {
-	internal StrongHandle(UntypedAssetId id, bool assetServerManaged, string? path, ChannelWriter<DropEvent> onDrop, Action<IAssetMeta>? metaTransform)
+	internal StrongHandle(UntypedAssetId id, bool assetServerManaged, AssetPath? path, ChannelWriter<DropEvent> onDrop, Action<IAssetMeta>? metaTransform)
 	{
 		Id = id;
 		AssetServerManaged = assetServerManaged;
@@ -179,7 +219,7 @@ public class StrongHandle
 	internal UntypedAssetId Id;
 	internal bool AssetServerManaged;
 	// TODO maybe add a custom type for handling storage source
-	internal string? Path;
+	internal AssetPath? Path;
 	public ChannelWriter<DropEvent> OnDrop;
 	/// <summary>
 	/// Modifies asset meta during a load
@@ -192,4 +232,5 @@ public class StrongHandle
 			throw new InvalidOperationException("Failed to write drop event");
 		}
 	}
+	public UntypedAssetId IntoUntypedAssetId() => Id;
 }

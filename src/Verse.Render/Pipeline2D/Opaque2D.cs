@@ -9,9 +9,9 @@ namespace Verse.Render.Pipeline2D;
 /// <param name="Indexed"></param>
 public record struct BatchSetKey2D(bool Indexed) : IPhaseItemBatchSetKey { }
 
-public record struct Opaque2DBinkey(CachedRenderPipelineId Pipeline, DrawFunctionId DrawFunction, )
+public record struct Opaque2DBinkey(CachedRenderPipelineId Pipeline, DrawFunctionId DrawFunction);
+
 public struct Opaque2D
 {
 	public BatchSetKey2D BatchSetKey;
-	public 
 }

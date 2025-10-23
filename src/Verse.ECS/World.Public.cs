@@ -1,5 +1,6 @@
 using Serilog;
 using Verse.ECS.Scheduling;
+using Verse.ECS.Systems;
 
 namespace Verse.ECS;
 
@@ -188,11 +189,37 @@ public sealed partial class World
 		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
 	}
 
+	public void RunSystem(ISystem system)
+	{
+		system.TryRun(this, CurTick);
+	}
+	
+	public bool EvalCondition(ICondition condition) {
+		return condition.Evaluate(this, CurTick);
+	}
+
 	public Res<T> GetResource<T>() => GetRes<T>();
 
 	public Res<T> GetRes<T>()
 	{
-		return new Res<T>(ResMut<T>.Generate(this));
+		return Res<T>.Generate(this);
+	}
+	
+	public Res<T> GetResOrDefault<T>() where T : IFromWorld<T>
+	{
+		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
+		var t = T.FromWorld(this);
+		InitRes<T>();
+		return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
+	}
+	public ResMut<T> GetResMutOrDefault<T>() where T : IFromWorld<T>
+	{
+		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
+			return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
+		var t = T.FromWorld(this);
+		InitRes<T>();
+		return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
 	}
 
 	public Res<T> MustGetRes<T>()
@@ -505,7 +532,7 @@ public sealed partial class World
 		}
 		schedules.Value.AllowAmbiguousComponent<T>(this);
 	}
-
+	
 	public void AllowAmbiguousResource<T>()
 	{
 		var schedules = MustGetResMut<ScheduleContainer>();

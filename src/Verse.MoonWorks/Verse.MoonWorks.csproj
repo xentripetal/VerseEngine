@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Verse.Assets\Verse.Assets.csproj" />
         <ProjectReference Include="..\Verse.Core\Verse.Core.csproj"/>
         <!--<ProjectReference Include="..\Verse.MoonWorks.Native\Verse.MoonWorks.Native.csproj"/>-->
         <ProjectReference Include="..\..\src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj" OutputItemType="Analyzer"/>

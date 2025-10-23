@@ -27,11 +27,7 @@ public partial class RunSystems
 	[Schedule]
 	public void Act2(ResMut<Example> b)
 	{
-		if (!b.HasValue) {
-			b.Value = new Example();
-		} else {
-			b.Value.Value++;
-		}
+		b.Value.Value++;
 	}
 
 	[Schedule]

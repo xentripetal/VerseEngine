@@ -33,7 +33,7 @@ public class SingleThreadedExecutor() : IExecutor
 		ApplyFinalDeferred = apply;
 	}
 
-	public void Run(SystemSchedule schedule, World world, FixedBitSet? skipSystems, uint tick)
+	public void Run(SystemSchedule schedule, World world, FixedBitSet? skipSystems)
 	{
 		if (skipSystems != null) {
 			CompletedSystems.Or(skipSystems.Value);
@@ -46,7 +46,7 @@ public class SingleThreadedExecutor() : IExecutor
 					continue;
 				}
 				// Evaluate system set's conditions
-				var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world, tick);
+				var setConditionsMet = EvaluateAndFoldConditions(schedule.SetConditions[setIdx], world);
 
 				// Skip all systems that belong to this set, not just the current one
 				if (!setConditionsMet) {
@@ -58,7 +58,7 @@ public class SingleThreadedExecutor() : IExecutor
 			}
 
 			// Evaluate System's conditions
-			var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world, tick);
+			var systemConditionsMet = EvaluateAndFoldConditions(schedule.SystemConditions[systemIndex], world);
 			shouldRun &= systemConditionsMet;
 
 			CompletedSystems.Set(systemIndex);
@@ -72,12 +72,7 @@ public class SingleThreadedExecutor() : IExecutor
 				continue;
 			}
 
-			try {
-				system.TryRun(world, tick);
-			}
-			catch (Exception e) {
-				Log.Error(e, "Error in system {System}", system.Meta.Name);
-			} 
+			world.RunSystem(system);
 			UnappliedSystems.Set(systemIndex);
 		}
 
@@ -96,12 +91,13 @@ public class SingleThreadedExecutor() : IExecutor
 		UnappliedSystems.Clear();
 	}
 
-	protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world, uint tick)
+	protected bool EvaluateAndFoldConditions(List<ICondition> conditions, World world)
 	{
 		// Not short-circuiting is intentional
 		var met = true;
 		foreach (var condition in conditions) {
-			if (!condition.Evaluate(world, tick)) {
+			
+			if (!world.EvalCondition(condition)) {
 				met = false;
 			}
 		}

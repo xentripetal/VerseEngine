@@ -181,6 +181,14 @@ public class App : IDisposable
 		SubApps.Main.AddEvent<T>();
 		return this;
 	}
+
+	public App AddMessage<T>() where T : notnull
+	{
+		// TODO refactor into an actual message vs events system
+		SubApps.Main.AddEvent<T>();
+		return this;
+	}
+	
 	public App AddPlugin(IPlugin plugin)
 	{
 		SubApps.Main.AddPluginToApp(this, plugin);

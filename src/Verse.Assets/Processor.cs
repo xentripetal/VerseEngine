@@ -1,7 +1,7 @@
 namespace Verse.Assets;
 
-public interface IAssetProcessor<TSelf, TSettings, TLoader, TLoaderSettings, TAsset>
-	where TSelf : IAssetProcessor<TSelf, TSettings, TLoader, TLoaderSettings, TAsset>
+public interface IAssetProcess<TSelf, TSettings, TLoader, TLoaderSettings, TAsset>
+	where TSelf : IAssetProcess<TSelf, TSettings, TLoader, TLoaderSettings, TAsset>
 	where TLoader : IAssetLoader<TAsset, TLoaderSettings>
 	where TSettings : ISettings
 	where TLoaderSettings : ISettings

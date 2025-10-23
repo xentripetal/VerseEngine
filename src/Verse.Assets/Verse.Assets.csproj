@@ -6,4 +6,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Verse.Core\Verse.Core.csproj" />
+      <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj" />
+    </ItemGroup>
+
 </Project>

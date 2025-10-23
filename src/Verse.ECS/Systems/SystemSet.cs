@@ -198,7 +198,7 @@ public abstract class StaticSystemSet : ISystemSet
 	public bool IsSystemAlias() => false;
 	public ISystemSet IntoSystemSet() => this;
 	public NodeConfigs<ISystemSet> IntoConfigs() => new SystemSetConfig(this);
-
+	
 	public override int GetHashCode() => GetType().GetHashCode();
 }
 

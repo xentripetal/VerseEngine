@@ -10,7 +10,8 @@ namespace Verse.Assets;
 /// </summary>
 /// <seealso cref="Handle{T}">Handle: for an identifier tied to the lifetime of an asset</seealso>
 /// <seealso cref="UntypedAssetId">UntypedAssetId: for an untyped id</seealso>
-public record struct AssetId<T>(AssetIndexOrGuid Id) where T : IAsset
+public record struct AssetId<T>(AssetIndexOrGuid Id) : IIntoAssetId<T>, IIntoUntypedAssetId
+	where T : IAsset
 {
 	public AssetId(AssetIndex index) : this(new AssetIndexOrGuid(index)) { }
 	public AssetId(Guid guid) : this(new AssetIndexOrGuid(guid)) { }
@@ -36,6 +37,18 @@ public record struct AssetId<T>(AssetIndexOrGuid Id) where T : IAsset
 	{
 		return new UntypedAssetId(typeof(T), Id);
 	}
+	public AssetId<T> IntoAssetId() => this;
+	public UntypedAssetId IntoUntypedAssetId() => Untyped();
+}
+
+public interface IIntoAssetId<T> where T : IAsset
+{
+	AssetId<T> IntoAssetId();
+}
+
+public interface IIntoUntypedAssetId
+{
+	UntypedAssetId IntoUntypedAssetId();
 }
 
 public sealed class AssetIndexAllocator
@@ -137,7 +150,6 @@ public record struct AssetIndexOrGuid : IComparable<AssetIndexOrGuid>
 	{
 		return new UntypedAssetId(type, this);
 	}
-
 }
 
 /// <summary>
@@ -146,7 +158,7 @@ public record struct AssetIndexOrGuid : IComparable<AssetIndexOrGuid>
 /// it enables storing asset ids across asset types together and enables comparison between them.
 /// 
 /// </summary>
-public record struct UntypedAssetId : IComparable<UntypedAssetId>
+public record struct UntypedAssetId : IComparable<UntypedAssetId>, IIntoUntypedAssetId
 {
 	public readonly AssetIndexOrGuid Id;
 	public readonly Type Type;
@@ -187,7 +199,8 @@ public record struct UntypedAssetId : IComparable<UntypedAssetId>
 	{
 		return HashCode.Combine(Type, Id);
 	}
-	
+	public UntypedAssetId IntoUntypedAssetId() => this;
+
 	public AssetId<T> TypedUnchecked<T> () where T : IAsset
 	{
 		return new AssetId<T>(Id);

@@ -65,7 +65,6 @@ public partial class EntitySyncSystems
 	public static void EntitySync(World mainWorld, World renderWorld)
 	{
 		var pendingRes = mainWorld.MustGetResMut<PendingSyncEntity>();
-		if (!pendingRes.HasValue) return;
 		var records = pendingRes.Value.records;
 		EntityView mainEntity = new EntityView();
 

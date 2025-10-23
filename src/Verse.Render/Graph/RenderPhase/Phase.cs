@@ -245,7 +245,7 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	public void Render(RenderPass pass, World world, EntityView view)
 	{
 		var functions = world.GetRes<DrawFunctions<TBinnedPhaseItem>>();
-		if (functions.HasValue) functions.Value.Prepare(world);
+		functions.Value.Prepare(world);
 		RenderBatchableMeshes(pass, world, view);
 		RenderUnbatchableMeshes(pass, world, view);
 		RenderNonMeshes(pass, world, view);
