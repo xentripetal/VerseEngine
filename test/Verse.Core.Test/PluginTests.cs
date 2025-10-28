@@ -286,10 +286,10 @@ public class ComplexConfigurationPlugin : IPlugin
     public void Build(App app)
     {
         // Add multiple resources
-        app.InitRes(new PluginTestResource { Name = "Complex Resource 1" });
+        app.InsertResource(new PluginTestResource { Name = "Complex Resource 1" });
         ConfigurationSteps.Add("AddResource1");
 
-        app.InitRes(new OtherPluginTestResource { Value = 42 });
+        app.InsertResource(new OtherPluginTestResource { Value = 42 });
         ConfigurationSteps.Add("AddResource2");
 
         // Create sub-app
@@ -298,8 +298,8 @@ public class ComplexConfigurationPlugin : IPlugin
         ConfigurationSteps.Add("AddSubApp");
 
         // Add events
-        app.World.AddEvent<PluginTestEvent>();
-        app.World.AddEvent<OtherPluginTestEvent>();
+        app.World.AddMessage<PluginTestEvent>();
+        app.World.AddMessage<OtherPluginTestEvent>();
         ConfigurationSteps.Add("AddEvents");
     }
 }
@@ -338,7 +338,7 @@ public class StatefulPlugin : IPlugin
     {
         State = "Building";
         
-        app.InitRes(new PluginTestResource { Name = "Stateful Resource" });
+        app.InsertResource(new PluginTestResource { Name = "Stateful Resource" });
         ConfigurationData.Add("Resource initialized");
 
         app.AddEvent<PluginTestEvent>();

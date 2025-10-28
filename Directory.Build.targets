@@ -1,0 +1,14 @@
+<Project>
+  <!-- Automatically add Verse.ECS.Generator to all projects except the generators themselves -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Verse.ECS.Generator' and
+                        '$(MSBuildProjectName)' != 'Verse.ECS.Internal.Generator' and
+                        '$(MSBuildProjectName)' != 'Verse.Core' and
+                        '$(MSBuildProjectName)' != 'Verse.ECS' and
+                        '$(MSBuildProjectExtension)' == '.csproj'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj"
+                      Condition="Exists('$(MSBuildThisFileDirectory)src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj')">
+      <OutputItemType>Analyzer</OutputItemType>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

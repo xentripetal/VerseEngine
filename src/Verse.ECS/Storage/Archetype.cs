@@ -18,9 +18,17 @@ internal readonly struct Column
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void MarkChanged(int index, uint ticks)
+	public void Clear(int index)
 	{
-		ChangedTicks[index] = ticks;
+		Array.Clear(Data, index, 1);
+		ChangedTicks[index] = 0;
+		AddedTicks[index] = 0;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void MarkChanged(int index, Tick tick)
+	{
+		ChangedTicks[index] = tick.Value;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -132,6 +140,7 @@ internal struct ArchetypeChunk
 	}
 }
 
+[DebuggerDisplay("Archetype(Generation={Generation}, HashId={HashId}, Count={Count}, Components=[{DebuggerDisplayComponentNames()}], Tags=[{Tags.Length}])")]
 public sealed class Archetype : IComparable<Archetype>
 {
 	public static ArchetypeGenerationComparer GenerationComparer = new ArchetypeGenerationComparer();
@@ -142,10 +151,14 @@ public sealed class Archetype : IComparable<Archetype>
 	internal const int CHUNK_THRESHOLD = CHUNK_SIZE - 1;
 	internal readonly List<EcsEdge> _add, _remove;
 	private readonly ComponentComparer _comparer;
-	private readonly FrozenDictionary<EcsID, int> _componentsLookup, _allLookup;
+	private readonly FrozenDictionary<ComponentId, int> _componentsLookup, _allLookup;
 	private readonly int[] _fastLookup;
 
 
+	private string DebuggerDisplayComponentNames()
+	{
+		return string.Join(", ", Components.Select(c => World.Registry.GetComponent(c.Id).Name));
+	}
 
 	public readonly SlimComponent[] All, Components, Tags, Pairs = Array.Empty<SlimComponent>();
 	private ArchetypeChunk[] _chunks;
@@ -167,15 +180,15 @@ public sealed class Archetype : IComparable<Archetype>
 
 
 		var hash = 0ul;
-		var dict = new Dictionary<EcsID, int>();
-		var allDict = new Dictionary<EcsID, int>();
-		var maxId = -1;
+		var dict = new Dictionary<ComponentId, int>();
+		var allDict = new Dictionary<ComponentId, int>();
+		uint maxId = 0;
 		for (int i = 0, cur = 0; i < sign.Length; ++i) {
 			hash = UnorderedSetHasher.Combine(hash, sign[i].Id);
 
 			if (sign[i].Size > 0) {
 				dict.Add(sign[i].Id, cur++);
-				maxId = Math.Max(maxId, (int)sign[i].Id);
+				maxId = uint.Max(maxId, sign[i].Id.Id);
 			}
 
 			allDict.Add(sign[i].Id, i);
@@ -186,7 +199,7 @@ public sealed class Archetype : IComparable<Archetype>
 		_fastLookup = new int[maxId + 1];
 		_fastLookup.AsSpan().Fill(-1);
 		foreach (var (cid, i) in dict) {
-			_fastLookup[(int)cid] = i;
+			_fastLookup[cid] = i;
 		}
 
 		_componentsLookup = dict.ToFrozenDictionary();
@@ -232,9 +245,9 @@ public sealed class Archetype : IComparable<Archetype>
 
 	internal int GetComponentIndex(EcsID id) => (int)id >= _fastLookup.Length ? -1 : _fastLookup[(int)id];
 
-	internal int GetAnyIndex(EcsID id) => _allLookup.GetValueOrDefault(id, -1);
+	internal int GetAnyIndex(ComponentId id) => _allLookup.GetValueOrDefault(id, -1);
 
-	internal bool HasIndex(EcsID id) => _allLookup.ContainsKey(id);
+	internal bool HasIndex(ComponentId id) => _allLookup.ContainsKey(id);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public int GetComponentIndex<T>() where T : struct
@@ -272,11 +285,17 @@ public sealed class Archetype : IComparable<Archetype>
 			var dstIdx = row & CHUNK_THRESHOLD;
 			for (var i = 0; i < Components.Length; ++i) {
 				lastChunk.Columns![i].CopyTo(srcIdx, in chunk.Columns![i], dstIdx);
+				lastChunk.Columns![i].Clear(dstIdx);
 			}
 
 			ref var rec = ref World.GetRecord(chunk.EntityAt(row).Id);
 			rec.Chunk = chunk;
 			rec.Row = row;
+		} else {
+			// delete the last one
+			for (var i = 0; i < Components.Length; ++i) {
+				chunk.Columns![i].Clear(row & CHUNK_THRESHOLD);
+			}	
 		}
 
 		// lastChunk.EntityAt(_count) = EntityView.Invalid;

@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace Verse.ECS.Scheduling;
 
-public struct FixedBitSet : IEquatable<FixedBitSet>, IEnumerable<ulong>
+public struct FixedBitSet : IEquatable<FixedBitSet>, IEnumerable<uint>
 {
 	public FixedBitSet(int length = 0)
 	{
@@ -176,12 +176,12 @@ public struct FixedBitSet : IEquatable<FixedBitSet>, IEnumerable<ulong>
 	/// Iterates over all enabled bits.
 	///
 	/// Iterator element is the index of the `1` bit, type `usize`.
-	public IEnumerable<ulong> OnesUL()
+	public IEnumerable<uint> OnesUInt()
 	{
 		int il = Length;
 		for (var i = 0; i < il; i++) {
 			if (_data![i]) {
-				yield return (ulong)i;
+				yield return (uint)i;
 			}
 		}
 	}
@@ -196,9 +196,9 @@ public struct FixedBitSet : IEquatable<FixedBitSet>, IEnumerable<ulong>
 		return !((BitArray)_data!.Clone()).Xor(other._data!).HasAnySet();
 	}
 
-	public IEnumerator<ulong> GetEnumerator()
+	public IEnumerator<uint> GetEnumerator()
 	{
-		return OnesUL().GetEnumerator();
+		return OnesUInt().GetEnumerator();
 	}
 	
 	public override bool Equals(object? obj) => obj is FixedBitSet other && Equals(other);

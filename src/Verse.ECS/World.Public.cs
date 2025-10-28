@@ -18,6 +18,7 @@ public sealed partial class World
 		EventRegistry = new EventRegistry();
 		Archetypes = new ArchetypeRegistry();
 		_comparer = new ComponentComparer();
+		Resources = new Resources();
 		Root = new Archetype(
 			this,
 			[],
@@ -140,12 +141,7 @@ public sealed partial class World
 	}
 
 
-	/// <summary>
-	///     Get or create an entity from a component.
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	public EntityView Entity<T>() where T : struct => new EntityView(this, GetComponent<T>().Id);
+
 
 	/// <summary>
 	///     Create or get an entity using the specified <paramref name="name" />.<br />
@@ -163,70 +159,14 @@ public sealed partial class World
 		return entity;
 	}
 
-	public void SetRes<T>(T value) => InitRes<T>(value);
-
-	public void InitRes<T>()
-	{
-		ResMut<T>.Generate(this);
-	}
-
-	public void InitRes<T>(T value)
-	{
-		ResMut<T>.Generate(this).Value = value;
-	}
-
-	public ResMut<T> GetResourceMut<T>() => GetResMut<T>();
-
-	public ResMut<T> GetResMut<T>()
-	{
-		return ResMut<T>.Generate(this);
-	}
-
-	public ResMut<T> MustGetResMut<T>()
-	{
-		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
-			return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
-		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
-	}
-
 	public void RunSystem(ISystem system)
 	{
 		system.TryRun(this, CurTick);
 	}
-	
-	public bool EvalCondition(ICondition condition) {
+
+	public bool EvalCondition(ICondition condition)
+	{
 		return condition.Evaluate(this, CurTick);
-	}
-
-	public Res<T> GetResource<T>() => GetRes<T>();
-
-	public Res<T> GetRes<T>()
-	{
-		return Res<T>.Generate(this);
-	}
-	
-	public Res<T> GetResOrDefault<T>() where T : IFromWorld<T>
-	{
-		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
-			return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
-		var t = T.FromWorld(this);
-		InitRes<T>();
-		return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
-	}
-	public ResMut<T> GetResMutOrDefault<T>() where T : IFromWorld<T>
-	{
-		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
-			return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
-		var t = T.FromWorld(this);
-		InitRes<T>();
-		return Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value;
-	}
-
-	public Res<T> MustGetRes<T>()
-	{
-		if (Entity<Placeholder<ResMut<T>>>().Has<Placeholder<ResMut<T>>>())
-			return new Res<T>(Entity<Placeholder<ResMut<T>>>().Get<Placeholder<ResMut<T>>>().Value);
-		throw new Exception($"ResMut<{typeof(T).FullName}> has not been created in this world");
 	}
 
 	/// <summary>
@@ -236,6 +176,7 @@ public sealed partial class World
 	/// <param name="entity"></param>
 	public void Delete(EcsID entity)
 	{
+		if (!Exists(entity)) return;
 		lock (_newEntLock) {
 			OnEntityDeleted?.Invoke(this, entity);
 
@@ -333,7 +274,7 @@ public sealed partial class World
 		_ = Attach(entity, in cmp);
 	}
 
-	public void Add(EcsID entity, EcsID id)
+	public void Add(EcsID entity, ComponentId id)
 	{
 		var c = new SlimComponent(id, 0);
 		_ = Attach(entity, in c);
@@ -367,7 +308,7 @@ public sealed partial class World
 	/// </summary>
 	/// <param name="entity"></param>
 	/// <param name="id"></param>
-	public void Unset(EcsID entity, EcsID id)
+	public void Unset(EcsID entity, ComponentId id)
 	{
 		Detach(entity, id);
 	}
@@ -388,7 +329,7 @@ public sealed partial class World
 	/// <param name="entity"></param>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public bool Has(EcsID entity, EcsID id) => IsAttached(ref GetRecord(entity), id);
+	public bool Has(EcsID entity, ComponentId id) => IsAttached(ref GetRecord(entity), id);
 
 	/// <summary>
 	///     Get a component from the entity.
@@ -506,17 +447,14 @@ public sealed partial class World
 	/// <returns>response from fn</returns>
 	public void ScheduleScope(string label, Action<World, Schedule> fn)
 	{
-		var schedules = MustGetResMut<ScheduleContainer>();
-		if (schedules.Value == null) {
-			throw new ArgumentException("ScheduleContainer not found");
-		}
-		var schedule = schedules.Value.Remove(label);
+		var schedules = Resource<ScheduleContainer>();
+		var schedule = schedules.Remove(label);
 		if (schedule == null) {
 			throw new ArgumentException($"Schedule for label {label} not found");
 		}
 
 		fn(this, schedule);
-		var old = schedules.Value.Insert(schedule);
+		var old = schedules.Insert(schedule);
 		if (old != null) {
 			Log.Warning(
 				"Schedule {Label} was inserted during a call to PolyWorld.ScheduleScope, its value has been overwritten",
@@ -526,51 +464,34 @@ public sealed partial class World
 
 	public void AllowAmbiguousComponent<T>() where T : struct
 	{
-		var schedules = MustGetResMut<ScheduleContainer>();
-		if (schedules.Value == null) {
-			throw new ArgumentException("ScheduleContainer not found");
-		}
-		schedules.Value.AllowAmbiguousComponent<T>(this);
+		var schedules = Resource<ScheduleContainer>();
+		schedules.AllowAmbiguousComponent(Registry.RegisterComponent<T>());
 	}
-	
+
 	public void AllowAmbiguousResource<T>()
 	{
-		var schedules = MustGetResMut<ScheduleContainer>();
-		if (schedules.Value == null) {
-			throw new ArgumentException("ScheduleContainer not found");
-		}
-		schedules.Value.AllowAmbiguousComponent<Placeholder<ResMut<T>>>(this);
+		var schedules = Resource<ScheduleContainer>();
+		schedules.AllowAmbiguousComponent(Registry.RegisterResource<T>());
 	}
 
-	public void AddEvent<T>() where T : notnull => RegisterEvent<T>();
-	public void RegisterEvent<T>() where T : notnull
+	public void AddMessage<T>() where T : notnull
 	{
-		if (Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
-			return;
-
-		var ev = new EventParam<T>();
-		Entity<Placeholder<EventParam<T>>>().Set(new Placeholder<EventParam<T>> { Value = ev });
-		EventRegistry.Register(ev);
-	}
-
-	public void WriteEvent<T>(in T value) where T : notnull
-	{
-		if (!Entity<Placeholder<EventParam<T>>>().Has<Placeholder<EventParam<T>>>())
-			throw new Exception($"Event {typeof(T).FullName} has not been registered in this world");
-
-		var ev = Entity<Placeholder<EventParam<T>>>().Get<Placeholder<EventParam<T>>>().Value;
-		ev.Writer.Enqueue(value);
-	}
-
-	/// <summary>
-	/// Sets Res<T> to null
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	public void RemoveRes<T>()
-	{
-		var entity = Entity<Placeholder<ResMut<T>>>();
-		if (entity.Has<Placeholder<ResMut<T>>>()) {
-			entity.Get<Placeholder<ResMut<T>>>().Value.Value = default(T);
+		var id = RegisterResource<Messages<T>>();
+		var data = Resources.InitializeResource(id);
+		if (!data.IsPresent) {
+			var messages = new Messages<T>();
+			data.Insert(messages, ChangeTick());
+			EventRegistry.Register(messages);
 		}
 	}
+	
+	public void WriteMessage<T>(in T value) where T : notnull
+	{
+		var messages = GetResource<Messages<T>>();
+		EcsAssert.Panic(messages != null, $"Messages<{typeof(T).FullName}> resource not found in world. Did you forget to call World.AddMessage<{typeof(T).FullName}>()?");
+		messages!.Writer.Enqueue(value);
+	}
+
+
+
 }

@@ -64,8 +64,8 @@ public partial class EntitySyncSystems
 {
 	public static void EntitySync(World mainWorld, World renderWorld)
 	{
-		var pendingRes = mainWorld.MustGetResMut<PendingSyncEntity>();
-		var records = pendingRes.Value.records;
+		var pendingRes = mainWorld.Resource<PendingSyncEntity>();
+		var records = pendingRes.records;
 		EntityView mainEntity = new EntityView();
 
 		while (records.TryDequeue(out var record)) {

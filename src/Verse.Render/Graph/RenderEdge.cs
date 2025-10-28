@@ -1,4 +1,5 @@
 using Verse.ECS;
+using Verse.ECS.Datastructures;
 
 namespace Verse.Render.Graph;
 

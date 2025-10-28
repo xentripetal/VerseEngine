@@ -1,5 +1,37 @@
 namespace Verse.ECS;
 
+/// <summary>
+/// A value which uniquely identifies the type of a <see cref="Component"/> or Resource within a <see cref="World"/>
+/// </summary>
+/// <param name="Id"></param>
+public readonly record struct ComponentId(uint Id) : ISparseSetIndex<ComponentId>
+{
+	public ComponentId(ulong id) : this((uint)id) { }
+	public int SparseSetIndex() => (int)Id;
+	public static ComponentId GetSparseSetIndex(int index) => new ComponentId((uint)index);
+
+	public static implicit operator uint(ComponentId id) => id.Id;
+	public static implicit operator ComponentId(uint id) => new ComponentId(id);
+	public int CompareTo(ComponentId id)
+	{
+		return Id.CompareTo(id.Id);
+	}
+}
+
+public enum StorageType
+{
+	/// <summary>
+	/// Provides fast and cache-friendly iteration, but slower addition and removal of components. This is the default
+	/// storage type
+	/// </summary>
+	Table,
+	/// <summary>
+	/// Provides fast addition and removal of components, but slower iteration
+	/// </summary>
+	SparseSet
+}
+
+
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 internal sealed class ComponentComparer :
 	IComparer<ulong>,
@@ -15,7 +47,7 @@ internal sealed class ComponentComparer :
 
 [DebuggerDisplay("ID: {Id}, Size: {Size}")]
 [SkipLocalsInit]
-public readonly record struct SlimComponent(ulong Id, int Size)
+public readonly record struct SlimComponent(ComponentId Id, int Size)
 {
 	public bool IsTag => Size == 0;
 }
@@ -40,16 +72,16 @@ public readonly record struct ComponentType
 	public int Size { get; }
 	public Type? Type { get; }
 	public EcsID EntityId { get; }
-	
+
 	public bool IsCLR => Type != null;
 	public bool IsEntityTag => EntityId != 0;
-	
+
 }
 
 [SkipLocalsInit]
 public class Component
 {
-	public Component(ComponentType type, string name, ulong id, World world, Func<int, Array?> creator)
+	public Component(ComponentType type, string name, ComponentId id, World world, Func<int, Array?> creator)
 	{
 		Type = type;
 		Name = name;
@@ -64,7 +96,7 @@ public class Component
 	public readonly Func<int, Array?> Creator;
 	public readonly ComponentType Type;
 	public readonly string Name;
-	public readonly ulong Id;
+	public readonly ComponentId Id;
 	public readonly World World;
 	public RawComponentHooks Hooks;
 
@@ -107,9 +139,6 @@ public interface IHookedComponent<T>
 	}
 }
 
-public class EntityComponent(ulong id, EcsID entityId, World world) : Component(ComponentType.OfEntity(entityId), world.Entity(entityId).Name(), id, world,
-	(_) => null);
-
 /// <summary>
 /// A static reference to a <see cref="Component"/> type.
 /// </summary>
@@ -117,7 +146,7 @@ public class EntityComponent(ulong id, EcsID entityId, World world) : Component(
 [SkipLocalsInit]
 public class Component<T> : Component
 {
-	public Component(ulong id, World world) : base(ComponentType.OfCLRType(typeof(T), StaticSize), StaticName, id, world, CreateArray)
+	public Component(ComponentId id, World world) : base(ComponentType.OfCLRType(typeof(T), StaticSize), StaticName, id, world, CreateArray)
 	{
 		if (typeof(T).IsAssignableTo(typeof(IHookedComponent<T>))) {
 			unsafe {
@@ -131,7 +160,7 @@ public class Component<T> : Component
 	// ReSharper disable once StaticMemberInGenericType
 	public static readonly int StaticSize = GetSize();
 	// ReSharper disable once StaticMemberInGenericType
-	public static readonly string StaticName = typeof(T).FullName ?? typeof(T).Name;
+	public static readonly string StaticName = typeof(T).ToString();
 
 	public static Array CreateArray(int count)
 	{
@@ -161,47 +190,55 @@ public class Component<T> : Component
 
 public class ComponentRegistry(World world)
 {
-	private ulong _index;
-	private readonly FastIdLookup<SlimComponent> _slimComponents = new FastIdLookup<SlimComponent>();
-	private readonly FastIdLookup<Component> _components = new FastIdLookup<Component>();
-	private readonly Dictionary<Type, EcsID> _typeToId = new Dictionary<Type, EcsID>();
+	private uint _index;
+	private readonly FastIdLookup<Component> components = new FastIdLookup<Component>();
+	private readonly Dictionary<Type, ComponentId> indices = new Dictionary<Type, ComponentId>();
+	private readonly Dictionary<Type, ComponentId> resourceIndices = new Dictionary<Type, ComponentId>();
 
-	public EcsID ClaimKey()
+	public ComponentId ClaimKey()
 	{
 		return Interlocked.Increment(ref _index);
 	}
-	public EcsID RegisterComponent<T>() where T : struct
+	public ComponentId RegisterComponent<T>() where T : struct
 	{
-		if (_typeToId.TryGetValue(typeof(T), out var id)) {
+		if (indices.TryGetValue(typeof(T), out var id)) {
 			return id;
 		}
 		var c = new Component<T>(ClaimKey(), world);
-		_typeToId.Add(typeof(T), c.Id);
-		_slimComponents.Add(c.Id, c.Slim);
-		_components.Add(c.Id, c);
+		indices.Add(typeof(T), c.Id);
+		components.Add(c.Id, c);
 		return c.Id;
 	}
 
 	public ref readonly SlimComponent GetSlimComponent(EcsID id)
 	{
-		ref readonly var cmp = ref _slimComponents.TryGet(id, out var exists);
+		ref readonly var cmp = ref components.TryGet(id, out var exists);
 		if (!exists)
 			EcsAssert.Panic(false, $"component not found with id {id}");
-		return ref cmp;
+		return ref cmp.Slim;
 	}
 
 	public ref readonly SlimComponent GetSlimComponent<T>() where T : struct
 	{
-		if (_typeToId.TryGetValue(typeof(T), out var id)) {
-			return ref _slimComponents[id];
+		if (indices.TryGetValue(typeof(T), out var id)) {
+			return ref components[id].Slim;
 		}
 		id = RegisterComponent<T>();
-		return ref _slimComponents[id];
+		return ref components[id].Slim;
 	}
+
+	public ComponentId? ComponentId<T>() where T : struct
+	{
+		if (indices.TryGetValue(typeof(T), out var id)) {
+			return id;
+		}
+		return null;
+	}
+	
 
 	public Component GetComponent(EcsID id)
 	{
-		ref readonly var cmp = ref _components.TryGet(id, out var exists);
+		ref readonly var cmp = ref components.TryGet(id, out var exists);
 		if (!exists)
 			EcsAssert.Panic(false, $"component not found with hashcode {id}");
 		return cmp;
@@ -209,16 +246,35 @@ public class ComponentRegistry(World world)
 
 	public Component GetComponent<T>() where T : struct
 	{
-		if (_typeToId.TryGetValue(typeof(T), out var id)) {
-			return _components[id];
+		if (indices.TryGetValue(typeof(T), out var id)) {
+			return components[id];
 		}
 		id = RegisterComponent<T>();
-		return _components[id];
+		return components[id];
+	}
+
+	public ComponentId RegisterResource<T>()
+	{
+		if (resourceIndices.TryGetValue(typeof(T), out var id)) {
+			return id;
+		}
+		var c = new Component<T>(ClaimKey(), world);
+		resourceIndices.Add(typeof(T), c.Id);
+		components.Add(c.Id, c);
+		return c.Id;	
+	}
+
+	public ComponentId? ResourceId<T>()
+	{
+		if (resourceIndices.TryGetValue(typeof(T), out var id)) {
+			return id;
+		}
+		return null;
 	}
 
 	public Array? GetArray(EcsID id, int count)
 	{
-		ref var c = ref _components.TryGet(id, out var exists);
+		ref var c = ref components.TryGet(id, out var exists);
 		if (exists)
 			return c.Creator(count);
 

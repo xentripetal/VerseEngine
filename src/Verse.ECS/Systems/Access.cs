@@ -38,8 +38,7 @@ public struct Access : IEquatable<Access>
 	/// <summary>
 	///     Adds access to the given type.
 	/// </summary>
-	/// <param name="type"></param>
-	public Access AddRead(ulong id)
+	public Access AddRead(ComponentId id)
 	{
 		ReadsAndWrites[id] = true;
 		return this;
@@ -49,7 +48,7 @@ public struct Access : IEquatable<Access>
 	///     Adds exclusive access to the given type.
 	/// </summary>
 	/// <param name="id"></param>
-	public Access AddWrite(ulong id)
+	public Access AddWrite(ComponentId id)
 	{
 		ReadsAndWrites[id] = true;
 		Writes[id] = true;
@@ -62,7 +61,7 @@ public struct Access : IEquatable<Access>
 	///     but whose presence in an archetype may affect query results.
 	/// </summary>
 	/// <param name="id"></param>
-	public Access AddArchetypal(ulong id)
+	public Access AddArchetypal(ComponentId id)
 	{
 		Archetypal[id] = true;
 		return this;
@@ -73,7 +72,7 @@ public struct Access : IEquatable<Access>
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public bool HasRead(ulong id) => ReadsAll || ReadsAndWrites.Contains((int)id);
+	public bool HasRead(ComponentId id) => ReadsAll || ReadsAndWrites.Contains(id);
 
 	/// <summary>
 	///     Returns `true` if this can access anything
@@ -86,7 +85,7 @@ public struct Access : IEquatable<Access>
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public bool HasWrite(ulong id) => WritesAll || Writes.Contains((int)id);
+	public bool HasWrite(ComponentId id) => WritesAll || Writes.Contains(id);
 
 	/// <summary>
 	///     Returns true if this can access anything exclusively
@@ -101,7 +100,7 @@ public struct Access : IEquatable<Access>
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	public bool HasArchetypal(ulong id) => Archetypal.Contains((int)id);
+	public bool HasArchetypal(ComponentId id) => Archetypal.Contains(id);
 
 	/// <summary>
 	///     Sets this as having access to all ids.
@@ -164,7 +163,7 @@ public struct Access : IEquatable<Access>
 
 	/// <summary>
 	///     Returns `true` if the access and `other` can be active at the same time.
-	///     <see cref="Access{T}" /> instances are incompatible if one can write
+	///     <see cref="Access" /> instances are incompatible if one can write
 	///     an element that the other can read or write.
 	/// </summary>
 	/// <param name="other"></param>
@@ -212,11 +211,11 @@ public struct Access : IEquatable<Access>
 		return conflicts;
 	}
 
-	public IEnumerable<ulong> GetReadsAndWrites() => ReadsAndWrites.OnesUL();
+	public IEnumerable<ComponentId> GetReadsAndWrites() => ReadsAndWrites.OnesUInt().Select(x => new ComponentId(x));
 
-	public IEnumerable<ulong> GetWrites() => Writes.OnesUL();
+	public IEnumerable<ComponentId> GetWrites() => Writes.OnesUInt().Select(x => new ComponentId(x));
 
-	public IEnumerable<ulong> GetArchetypal() => Archetypal.OnesUL();
+	public IEnumerable<ComponentId> GetArchetypal() => Archetypal.OnesUInt().Select(x => new ComponentId(x));
 
 	/// <summary>
 	///     Evaluates if other contains at least all the values in this
@@ -257,7 +256,7 @@ public struct AccessFilters : IEquatable<AccessFilters>
 
 	public bool IsRuledOutBy(AccessFilters other) => With.Overlaps(other.Without) || Without.Overlaps(other.With);
 
-	public AccessFilters Clone() => new () {
+	public AccessFilters Clone() => new AccessFilters {
 		With = With.Clone(),
 		Without = Without.Clone()
 	};
@@ -269,10 +268,10 @@ public struct AccessFilters : IEquatable<AccessFilters>
 	public override int GetHashCode() => HashCode.Combine(With, Without);
 }
 
-public struct FilteredAccess : IEquatable<FilteredAccess>
+public struct FilteredAccess() : IEquatable<FilteredAccess>
 {
-	public Access Access;
-	public FixedBitSet Required;
+	public Access Access = default;
+	public FixedBitSet Required = default;
 	/// <summary>
 	///     An array of filter sets to express `With` or `Without` clauses in disjunctive normal form, for example:
 	///     `Or{(With{A}, With{B})}`.
@@ -281,13 +280,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 	/// </summary>
 	public AccessFilters[] FilterSets = [new AccessFilters()];
 
-	public FilteredAccess()
-	{
-		Access = default;
-		Required = default;
-	}
-
-	public FilteredAccess AddRead(ulong id)
+	public FilteredAccess AddRead(ComponentId id)
 	{
 		Access.AddRead(id);
 		Required.Set(id);
@@ -295,7 +288,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 		return this;
 	}
 
-	public FilteredAccess AddWrite(ulong id)
+	public FilteredAccess AddWrite(ComponentId id)
 	{
 		Access.AddWrite(id);
 		Required.Set(id);
@@ -303,7 +296,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 		return this;
 	}
 
-	public FilteredAccess AddRequired(ulong id)
+	public FilteredAccess AddRequired(ComponentId id)
 	{
 		Required.Set(id);
 		return this;
@@ -316,7 +309,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 	///     With{C}))}`.
 	/// </summary>
 	/// <param name="id"></param>
-	public FilteredAccess AndWith(ulong id)
+	public FilteredAccess AndWith(ComponentId id)
 	{
 		for (int i = 0; i < FilterSets.Length; i++) {
 			var filter = FilterSets[i];
@@ -332,7 +325,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 	///     Adding `AND Without{C}` via this method transforms it into the equivalent of  `Or{((With{A}, Without{C}), (With{B},
 	///     Without{C}))}`.
 	/// </summary>
-	public FilteredAccess AndWithout(ulong id)
+	public FilteredAccess AndWithout(ComponentId id)
 	{
 		for (int i = 0; i < FilterSets.Length; i++) {
 			var filter = FilterSets[i];
@@ -459,15 +452,15 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 	public bool IsSubset(FilteredAccess other) => Required.IsSubsetOf(other.Required) && Access.IsSubset(other.Access);
 
 	/// <returns>The elements that this access filters for</returns>
-	public IEnumerable<ulong> WithFilters()
+	public IEnumerable<ComponentId> WithFilters()
 	{
-		return FilterSets.SelectMany(x => x.With);
+		return FilterSets.SelectMany(x => x.With).Select(x => new ComponentId(x));
 	}
 
 	/// <returns>The elements that this access filters out</returns>
-	public IEnumerable<ulong> WithoutFilters()
+	public IEnumerable<ComponentId> WithoutFilters()
 	{
-		return FilterSets.SelectMany(x => x.Without);
+		return FilterSets.SelectMany(x => x.Without).Select(x => new ComponentId(x));
 	}
 
 	public bool Equals(FilteredAccess other)
@@ -479,7 +472,7 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 }
 
 /// <summary>
-///     A collection of <see cref="FilteredAccess{T}" /> instances.
+///     A collection of <see cref="FilteredAccess" /> instances.
 ///     Used internally to statically check if systems have conflicting access.
 ///     It stores multiple sets of accesses.
 ///     <list id="bullet">
@@ -487,23 +480,17 @@ public struct FilteredAccess : IEquatable<FilteredAccess>
 ///         <item>The set of access of each individual filters in this set </item>
 ///     </list>
 /// </summary>
-public struct FilteredAccessSet
+public struct FilteredAccessSet()
 {
-	public Access CombinedAccess;
-	public List<FilteredAccess> FilteredAccesses;
-
-	public FilteredAccessSet()
-	{
-		CombinedAccess = new Access();
-		FilteredAccesses = new List<FilteredAccess>();
-	}
+	public Access CombinedAccess = new Access();
+	public List<FilteredAccess> FilteredAccesses = new List<FilteredAccess>();
 
 	/// <summary>
 	///     If the id is already read, this will upgrade it to a write for each subaccess that reads it
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns>true if there was a read to turn into a write</returns>
-	public bool UpgradeReadToWrite(ulong id)
+	public bool UpgradeReadToWrite(ComponentId id)
 	{
 		if (!CombinedAccess.ReadsAll && CombinedAccess.HasRead(id)) {
 			return false;
@@ -598,7 +585,7 @@ public struct FilteredAccessSet
 	/// <summary>
 	///     Adds a read access without filters to the set
 	/// </summary>
-	public FilteredAccessSet AddUnfilteredRead(ulong element)
+	public FilteredAccessSet AddUnfilteredRead(ComponentId element)
 	{
 		var filter = new FilteredAccess();
 		filter.AddRead(element);
@@ -609,7 +596,7 @@ public struct FilteredAccessSet
 	///     Adds a write access without filters to the set
 	/// </summary>
 	/// <param name="element"></param>
-	public FilteredAccessSet AddUnfilteredWrite(ulong element)
+	public FilteredAccessSet AddUnfilteredWrite(ComponentId element)
 	{
 		var filter = new FilteredAccess();
 		filter.AddWrite(element);

@@ -39,7 +39,7 @@ public class Render2DPipelinePlugin : IPlugin
 			return;
 		}
 
-		var graph = renderApp.World.GetRes<RenderGraph>().Value;
+		var graph = renderApp.World.Resource<RenderGraph>();
 		var graph2D = new RenderGraph();
 		graph.AddSubGraph(Render2DGraph.Label(), graph2D);
 		graph2D.AddNode(Node2D.StartMainPass.AsRenderLabel(), new EmptyNode());

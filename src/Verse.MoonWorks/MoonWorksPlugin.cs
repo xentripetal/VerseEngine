@@ -18,11 +18,10 @@ public struct MoonWorksPlugin(
 
 	public void Build(App app)
 	{
-		app.AddEvent<SDL.SDL_Event>().
-			AddEvent<CloseWindowRequest>().
-			InitRes<GraphicsDevice>().
-			InitRes(new WindowRegistry()).
-			InitRes(new GraphicSettings {
+		app.AddMessage<SDL.SDL_Event>().
+			AddMessage<CloseWindowRequest>().
+			InsertResource(new WindowRegistry()).
+			InitResource(new GraphicSettings {
 				AvailableShaderFormats = ShaderFormat.MetalLib | ShaderFormat.MSL | ShaderFormat.SPIRV | ShaderFormat.DXBC | ShaderFormat.DXIL,
 				DebugMode = true
 			}).
@@ -33,10 +32,14 @@ public struct MoonWorksPlugin(
 	}
 }
 
-public struct GraphicSettings
+public class GraphicSettings : IDefault<GraphicSettings>
 {
 	public ShaderFormat AvailableShaderFormats;
 	public bool DebugMode;
+	public static GraphicSettings Default() => new GraphicSettings {
+		AvailableShaderFormats = ShaderFormat.MetalLib | ShaderFormat.MSL | ShaderFormat.SPIRV | ShaderFormat.DXBC | ShaderFormat.DXIL,
+		DebugMode = true
+	};
 }
 
 // TODO replace Window with a struct
@@ -85,17 +88,13 @@ public class WindowRegistry
 
 public partial class MoonWorksSystems
 {
-	[Schedule(Schedules.First)]
-	public static void InitGraphics(in TitleStorage storage, ref GraphicsDevice? graphics, in GraphicSettings settings)
+	[Schedule(Schedules.Startup)]
+	public void InitGraphics(World world, in GraphicSettings settings, in TitleStorage storage)
 	{
-		// TODO break GraphicsDevice out into its own plugin
-		if (graphics == null) {
-			graphics = new GraphicsDevice(storage, settings.AvailableShaderFormats, settings.DebugMode);
-		}
+		world.InsertResource(new GraphicsDevice(storage, settings.AvailableShaderFormats, settings.DebugMode));
 	}
-
+	
 	[Schedule(Schedules.First)]
-	[AfterSystem<InitGraphicsSystem>]
 	public void CreateWindows(Query<Data<WindowComponent>, Added<WindowComponent>> q, in GraphicsDevice graphics, in WindowRegistry registry)
 	{
 		foreach (var (e, window) in q) {

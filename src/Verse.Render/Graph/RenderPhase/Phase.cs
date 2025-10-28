@@ -1,15 +1,10 @@
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using FluentResults;
 using Verse.ECS;
 using Verse.Render.View;
-using Verse.Core;
-using Verse.Core.Datastructures;
+using Verse.ECS.Datastructures;
 using Verse.ECS.Scheduling;
 using Verse.MoonWorks.Graphics;
-using Verse.Render;
-using Verse.Render.Batching;
 
 namespace Verse.Render.Graph.RenderPhase;
 
@@ -20,7 +15,7 @@ public interface IShaderLabel : ILabel { }
 
 public class ShaderLabelEnum(Enum value) : LabelEnum(value), IShaderLabel
 {
-	public static implicit operator ShaderLabelEnum(Enum value) => new (value);
+	public static implicit operator ShaderLabelEnum(Enum value) => new ShaderLabelEnum(value);
 	public static IShaderLabel Of(Enum value) => new ShaderLabelEnum(value);
 }
 
@@ -33,7 +28,6 @@ public class ShaderLabelEnum(Enum value) : LabelEnum(value), IShaderLabel
 ///
 /// Based on Bevy's ViewBinnedRenderPhases.
 /// </remarks>
-/// <typeparam name="TBinnedPhaseItem">The type of binned phase item.</typeparam>
 public sealed class
 	ViewBinnedRenderPhases<TBinnedPhaseItem, TBinKey, TBatchSetKey> : Dictionary<RetainedViewEntity, BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>>
 	where TBinnedPhaseItem : IBinnedPhaseItem<TBinKey, TBatchSetKey, TBinnedPhaseItem>
@@ -95,7 +89,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	/// entities in it. The second bin, corresponding to the sphere, will have one entity in it.
 	/// </para>
 	/// </remarks>
-	public readonly IndexDictionary<TBatchSetKey, IndexDictionary<TBinKey, RenderBin>> MultidrawableMeshes = new ();
+	public readonly IndexDictionary<TBatchSetKey, IndexDictionary<TBinKey, RenderBin>> MultidrawableMeshes =
+		new IndexDictionary<TBatchSetKey, IndexDictionary<TBinKey, RenderBin>>();
 
 	/// <summary>
 	/// The bins corresponding to batchable items that aren't multidrawable.
@@ -103,7 +98,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	/// <remarks>
 	/// For multidrawable entities, use MultidrawableMeshes; for unbatchable entities, use UnbatchableMeshes.
 	/// </remarks>
-	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), RenderBin> BatchableMeshes = new ();
+	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), RenderBin> BatchableMeshes =
+		new IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), RenderBin>();
 
 	/// <summary>
 	/// The unbatchable bins.
@@ -111,7 +107,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	/// <remarks>
 	/// Each entity here is rendered in a separate drawcall.
 	/// </remarks>
-	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), UnbatchableBinnedEntities> UnbatchableMeshes = new ();
+	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), UnbatchableBinnedEntities> UnbatchableMeshes =
+		new IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), UnbatchableBinnedEntities>();
 
 	/// <summary>
 	/// Items in the bin that aren't meshes at all.
@@ -121,7 +118,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	/// execute custom drawing commands. Draw functions for each entity are simply called in order
 	/// at rendering time.
 	/// </remarks>
-	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), NonMeshEntities> NonMeshItems = new ();
+	public readonly IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), NonMeshEntities> NonMeshItems =
+		new IndexDictionary<(TBatchSetKey BatchSetKey, TBinKey BinKey), NonMeshEntities>();
 
 	/// <summary>
 	/// Information on each batch set
@@ -131,7 +129,7 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 	/// <para> Bevy supports multiple types of batches for targets like WebGL. I think SDL3 abstracts a lot of this away
 	/// so I skipped porting this and went with the assumption batching API will always be supported. </para>
 	/// </remarks>
-	internal List<BinnedRenderPhaseBatchSet<TBinKey>> BatchSets;
+	internal List<BinnedRenderPhaseBatchSet<TBinKey>> BatchSets = new List<BinnedRenderPhaseBatchSet<TBinKey>>();
 
 	/// <summary>
 	/// The batch and bin key for each entity.
@@ -244,8 +242,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 
 	public void Render(RenderPass pass, World world, EntityView view)
 	{
-		var functions = world.GetRes<DrawFunctions<TBinnedPhaseItem>>();
-		functions.Value.Prepare(world);
+		var functions = world.Resource<DrawFunctions<TBinnedPhaseItem>>();
+		functions.Prepare(world);
 		RenderBatchableMeshes(pass, world, view);
 		RenderUnbatchableMeshes(pass, world, view);
 		RenderNonMeshes(pass, world, view);
@@ -253,8 +251,8 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 
 	private void RenderBatchableMeshes(RenderPass pass, World world, EntityView view)
 	{
-		var drawFunctions = world.MustGetResMut<DrawFunctions<TBinnedPhaseItem>>().Value!;
-		var driver = world.MustGetResMut<GraphicsDevice>();
+		var drawFunctions = world.Resource<DrawFunctions<TBinnedPhaseItem>>()!;
+		var driver = world.Resource<GraphicsDevice>();
 
 		// don't really understand this, but its equivalent to bevys behavior. Not sure why the BatchSets would correspond
 		// to both multidrawable and batchable meshes in that order.
@@ -281,7 +279,7 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 
 	private void RenderUnbatchableMeshes(RenderPass pass, World world, EntityView view)
 	{
-		var drawFunctions = world.MustGetResMut<DrawFunctions<TBinnedPhaseItem>>().Value!;
+		var drawFunctions = world.Resource<DrawFunctions<TBinnedPhaseItem>>();
 
 		foreach (var kvp in UnbatchableMeshes) {
 			var (batchSetKey, binKey) = kvp.Key;
@@ -339,7 +337,7 @@ public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
 
 	private void RenderNonMeshes(RenderPass pass, World world, EntityView view)
 	{
-		var drawFunctions = world.MustGetResMut<DrawFunctions<TBinnedPhaseItem>>().Value!;
+		var drawFunctions = world.Resource<DrawFunctions<TBinnedPhaseItem>>();
 
 		foreach (var kvp in NonMeshItems) {
 			var (batchSetKey, binKey) = kvp.Key;
@@ -522,7 +520,7 @@ public sealed class RenderBin
 	/// <summary>
 	/// A list of the entities in each bin, along with their cached <see cref="InputUniformIndex"/>
 	/// </summary>
-	public readonly IndexDictionary<MainEntity, InputUniformIndex> Entities = new ();
+	public readonly IndexDictionary<MainEntity, InputUniformIndex> Entities = new IndexDictionary<MainEntity, InputUniformIndex>();
 
 	/// <summary>
 	/// Creates a RenderBin containing a single entity.
@@ -735,7 +733,7 @@ public enum BinnedRenderPhaseType
 public readonly record struct InputUniformIndex(uint Index)
 {
 	public static implicit operator uint(InputUniformIndex index) => index.Index;
-	public static implicit operator InputUniformIndex(uint index) => new (index);
+	public static implicit operator InputUniformIndex(uint index) => new InputUniformIndex(index);
 }
 
 /// <summary>
@@ -915,7 +913,7 @@ public sealed class UnbatchableBinnedEntities
 	/// <summary>
 	/// The entities.
 	/// </summary>
-	public Dictionary<MainEntity, ulong> Entities { get; } = new ();
+	public Dictionary<MainEntity, ulong> Entities { get; } = new Dictionary<MainEntity, ulong>();
 	/// <summary>
 	/// The GPU array buffer indices of each unbatchable binned entity.
 	/// </summary>
@@ -954,7 +952,7 @@ public sealed class NonMeshEntities
 	/// <summary>
 	/// The entities.
 	/// </summary>
-	public Dictionary<MainEntity, ulong> Entities { get; } = new ();
+	public Dictionary<MainEntity, ulong> Entities { get; } = new Dictionary<MainEntity, ulong>();
 }
 
 /// <summary>
@@ -1012,7 +1010,7 @@ public sealed class SortedRenderPhase<TSortedPhaseItem>
 	/// <summary>
 	/// The items within this SortedRenderPhase.
 	/// </summary>
-	public List<TSortedPhaseItem> Items { get; } = new ();
+	public List<TSortedPhaseItem> Items { get; } = new List<TSortedPhaseItem>();
 
 	/// <summary>
 	/// Adds a PhaseItem to this render phase.

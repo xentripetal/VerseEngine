@@ -4,7 +4,7 @@ namespace Verse.ECS;
 
 public interface IQueryTerm : IComparable<IQueryTerm>
 {
-	EcsID Id { get; init; }
+	ComponentId Id { get; init; }
 	TermOp Op { get; init; }
 	TermAccess Access { get; init; }
 
@@ -24,9 +24,9 @@ public interface IQueryTerm : IComparable<IQueryTerm>
 }
 
 [DebuggerDisplay("{Id} - {Op}")]
-public readonly struct WithTerm(EcsID id, TermAccess Access = TermAccess.Read) : IQueryTerm
+public readonly struct WithTerm(ComponentId id, TermAccess Access = TermAccess.Read) : IQueryTerm
 {
-	public ulong Id { get; init; } = id;
+	public ComponentId Id { get; init; } = id;
 	public TermOp Op { get; init; } = TermOp.With;
 	public TermAccess Access { get; init; } = Access;
 
@@ -35,9 +35,9 @@ public readonly struct WithTerm(EcsID id, TermAccess Access = TermAccess.Read) :
 
 
 [DebuggerDisplay("{Id} - {Op}")]
-public readonly struct WithoutTerm(EcsID id) : IQueryTerm
+public readonly struct WithoutTerm(ComponentId id) : IQueryTerm
 {
-	public ulong Id { get; init; } = id;
+	public ComponentId Id { get; init; } = id;
 	public TermOp Op { get; init; } = TermOp.Without;
 	public TermAccess Access { get; init; } = TermAccess.None;
 
@@ -45,9 +45,9 @@ public readonly struct WithoutTerm(EcsID id) : IQueryTerm
 }
 
 [DebuggerDisplay("{Id} - {Op}")]
-public readonly struct OptionalTerm(EcsID id) : IQueryTerm
+public readonly struct OptionalTerm(ComponentId id) : IQueryTerm
 {
-	public ulong Id { get; init; } = id;
+	public ComponentId Id { get; init; } = id;
 	public TermOp Op { get; init; } = TermOp.Optional;
 	public TermAccess Access { get; init; } = TermAccess.Write;
 
@@ -55,9 +55,9 @@ public readonly struct OptionalTerm(EcsID id) : IQueryTerm
 }
 
 [DebuggerDisplay("{Id} - {Op}")]
-public readonly struct OptionalROTerm(EcsID id) : IQueryTerm
+public readonly struct OptionalROTerm(ComponentId id) : IQueryTerm
 {
-	public ulong Id { get; init; } = id;
+	public ComponentId Id { get; init; } = id;
 	public TermOp Op { get; init; } = TermOp.Optional;
 	public TermAccess Access { get; init; } = TermAccess.Read;
 

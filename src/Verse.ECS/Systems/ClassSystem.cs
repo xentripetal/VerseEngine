@@ -87,11 +87,10 @@ public abstract class ClassSystem : ISystem, IIntoSystemConfigs, IIntoSystemSet
 
 	public virtual void TryRun(World world, uint tick)
 	{
-		Meta.Ticks.ThisRun = tick;
 		foreach (var param in Params) {
-			if (!param.Ready(this, world))
-				return;
+			param.ValidateParam(this.Meta, world, tick);
 		}
+		
 		Run(world);
 		Meta.Ticks.LastRun = tick;
 	}

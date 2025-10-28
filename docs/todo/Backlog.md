@@ -29,4 +29,3 @@
 - [x] Improve EnumSystemSet behavior
 - [ ] Figure out what to do about Fix64
 - [ ] Rewrite Matrix4 to Affine3 with SIMD
-- [ ] 

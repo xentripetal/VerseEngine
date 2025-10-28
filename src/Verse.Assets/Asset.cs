@@ -1,8 +1,10 @@
+using Verse.Core;
 using Verse.ECS;
+using Verse.ECS.Systems;
 
 namespace Verse.Assets;
 
-public struct AssetPath : IIntoAssetPath
+public record struct AssetPath : IIntoAssetPath
 {
 	public string Source;
 	public string Path;
@@ -49,7 +51,7 @@ public interface IIntoAssetPath
 	AssetPath IntoAssetPath();
 }
 
-public struct AssetHash
+public record struct AssetHash
 {
 	public int Hash;
 }
@@ -69,7 +71,7 @@ public interface IAsset<out TSelf> : IAsset where TSelf : IAsset<TSelf>
 	/// </summary>
 	void IAssetContainer.InsertAsset(UntypedAssetId id, World world)
 	{
-		world.MustGetResMut<Assets<TSelf>>().Value.Insert(id.Typed<TSelf>(), GetValue());
+		world.Resource<Assets<TSelf>>().Insert(id.Typed<TSelf>(), GetValue());
 	}
 	Type IAssetContainer.AssetType { get => typeof(TSelf); }
 	protected TSelf GetValue() => (TSelf)this;
@@ -120,9 +122,6 @@ public sealed class DenseAssetStorage<T> where T : IAsset
 
 		var entry = storage[(int)index.Index];
 		if (entry.Generation != index.Generation) {
-			if (entry.Generation == Entry.INVALID_GENERATION) {
-				throw new InvalidGenerationException(index);
-			}
 			throw new InvalidGenerationException(index, entry.Generation);
 		}
 
@@ -184,7 +183,9 @@ public sealed class DenseAssetStorage<T> where T : IAsset
 		var newLength = allocator.nextIndex;
 		if (newLength > storage.Count) {
 			for (var i = storage.Count; i < newLength; i++) {
-				storage.Add(new Entry());
+				storage.Add(new Entry {
+					Generation = 1,
+				});
 			}
 		} else if (newLength < storage.Count) {
 			storage.RemoveRange((int)newLength, (int)(storage.Count - newLength));
@@ -285,7 +286,8 @@ public class InvalidGenerationException : Exception
 /// </para>
 /// </remarks>
 /// <typeparam name="T">The asset type</typeparam>
-public sealed class Assets<T> where T : IAsset
+public partial class Assets<T>  
+	where T : IAsset 
 {
 	public Assets()
 	{
@@ -615,9 +617,30 @@ public sealed class Assets<T> where T : IAsset
 	/// A system for tracking asset drops for the asset server and this asset collection
 	/// </summary>
 	/// <param name="server"></param>
+	[Schedule(Schedules.PreUpdate)]
+	[InSet<AssetSystems>(AssetSystems.TrackAssetSystems)]
 	public void TrackAssets(Res<AssetServer> server)
 	{
 		server.Value.ProcessAssetDrops<T>(this);
 	}
-	
+
+	[Schedule(Schedules.PostUpdate)]
+	[InSet<AssetSystems>(AssetSystems.AssetEventSystems)]
+	public void AssetEvents()
+	{
+		// TODO bevy syncs these to Messages<AssetEvents<T>> and ResMut<AssetChanges<T>>
+		QueuedEvents.Clear();
+	}
+}
+
+public enum AssetSystems
+{
+	/// <summary>
+	/// A system set that holds all "track asset" operations.
+	/// </summary>
+	TrackAssetSystems,
+	/// <summary>
+	/// A system set where events accumulated in <see cref="Assets{T}"/> are applied to the [`AssetEvent`] [`Messages`] resource.
+	/// </summary>
+	AssetEventSystems,
 }

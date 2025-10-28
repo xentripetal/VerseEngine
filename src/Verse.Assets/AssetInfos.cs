@@ -40,7 +40,7 @@ internal struct InternalAssetEvent
 	public UntypedAssetId Id;
 	public UntypedLoadedAsset? LoadedAsset;
 	public AssetPath? Path;
-	public Exception? Exception;
+	public AssetLoadException? Exception;
 }
 
 public class AssetInfos
@@ -391,7 +391,7 @@ public class AssetInfos
 			info.LoadingRecursiveDependencies.Remove(failedId);
 			info.FailedRecursiveDependencies.Add(failedId);
 			info.RecursiveDependencyLoadState = LoadState.Failed(error!);
-			
+
 			var waitingOnRecursiveLoad = info.DependentsWaitingOnRecursiveLoad;
 			info.DependentsWaitingOnRecursiveLoad = new HashSet<UntypedAssetId>();
 			foreach (var depId in waitingOnRecursiveLoad) {
@@ -407,7 +407,7 @@ public class AssetInfos
 		if (!infos.TryGetValue(failedId, out var info)) {
 			return;
 		}
-		
+
 		info.LoadState = LoadState.Failed(error);
 		info.DependencyLoadState = LoadState.Failed(error);
 		info.RecursiveDependencyLoadState = LoadState.Failed(error);
@@ -426,7 +426,7 @@ public class AssetInfos
 				info.DependencyLoadState = LoadState.Failed(error);
 			}
 		}
-		
+
 		foreach (var depId in dependentsWaitingOnRecursiveLoad) {
 			PropagateFailedState(failedId, depId, error);
 		}
@@ -465,7 +465,6 @@ public class AssetInfos
 			}
 		}
 	}
-
 }
 
 public class AssetLoadException : Exception

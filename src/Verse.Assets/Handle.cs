@@ -102,7 +102,7 @@ public record struct StrongHandleOrGuid : IComparable<StrongHandleOrGuid>
 /// </para>
 /// </remarks>
 /// <typeparam name="T"></typeparam>
-public struct Handle<T> : IVisitAssetDependencies
+public struct Handle<T> : IVisitAssetDependencies, IIntoUntypedAssetId, IIntoAssetId<T>
 	where T : IAsset
 {
 	public Handle(StrongHandle handle)
@@ -153,6 +153,8 @@ public struct Handle<T> : IVisitAssetDependencies
 		}
 		return new UntypedHandle(_handle.AsHandle);
 	}
+	public UntypedAssetId IntoUntypedAssetId() => Untyped().IntoUntypedAssetId();
+	public AssetId<T> IntoAssetId() => Id();
 }
 
 /// <summary>

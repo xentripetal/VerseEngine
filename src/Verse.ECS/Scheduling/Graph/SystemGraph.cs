@@ -18,38 +18,38 @@ namespace Verse.ECS.Scheduling.Graph;
 /// </remarks>
 public class SystemGraph
 {
-	public readonly UndirectedGraph<NodeId, Edge<NodeId>> AmbiguousWith = new ();
-	protected readonly HashSet<NodeId> AmbiguousWithAll = new ();
+	public readonly UndirectedGraph<NodeId, Edge<NodeId>> AmbiguousWith = new UndirectedGraph<NodeId, Edge<NodeId>>();
+	protected readonly HashSet<NodeId> AmbiguousWithAll = new HashSet<NodeId>();
 	protected ulong AnonymousSets;
-	protected readonly Dictionary<uint, NodeId> AutoSyncNodeIds = new ();
+	protected readonly Dictionary<uint, NodeId> AutoSyncNodeIds = new Dictionary<uint, NodeId>();
 	public bool Changed = true;
 	public ScheduleBuildSettings Config = new (autoInsertApplyDeferred: true);
-	protected List<(NodeId, NodeId, ulong[])> ConflictingSystems = new ();
+	protected List<(NodeId, NodeId, uint[])> ConflictingSystems = new List<(NodeId, NodeId, uint[])>();
 
 	/// Directed acyclic graph of the dependency (which systems/sets have to run before which other systems/sets)
-	protected readonly BidirectionalGraph<NodeId, Edge<NodeId>> Dependency = new ();
+	protected readonly BidirectionalGraph<NodeId, Edge<NodeId>> Dependency = new BidirectionalGraph<NodeId, Edge<NodeId>>();
 
 	/// Directed acyclic graph of the hierarchy (which systems/sets are children of which sets)
-	protected BidirectionalGraph<NodeId, Edge<NodeId>> Hierarchy = new ();
+	protected BidirectionalGraph<NodeId, Edge<NodeId>> Hierarchy = new BidirectionalGraph<NodeId, Edge<NodeId>>();
 
 	/// Dependency edges that will **not** automatically insert an instance of `apply_deferred` on the edge.
-	protected readonly HashSet<(NodeId, NodeId)> NoSyncEdges = new ();
+	protected readonly HashSet<(NodeId, NodeId)> NoSyncEdges = new HashSet<(NodeId, NodeId)>();
 	/// List of conditions for each system, in the same order as `systems`
-	protected readonly List<List<ICondition>> SystemConditions = new ();
+	protected readonly List<List<ICondition>> SystemConditions = new List<List<ICondition>>();
 	/// List of systems in the schedule
-	protected readonly List<ISystem> Systems = new ();
+	protected readonly List<ISystem> Systems = new List<ISystem>();
 
 	/// List of conditions for each system set, in the same order as `system_sets`
-	protected readonly List<List<ICondition>> SystemSetConditions = new ();
+	protected readonly List<List<ICondition>> SystemSetConditions = new List<List<ICondition>>();
 
 	/// Map from system set to node id
-	public readonly Dictionary<ISystemSet, NodeId> SystemSetIds = new ();
+	public readonly Dictionary<ISystemSet, NodeId> SystemSetIds = new Dictionary<ISystemSet, NodeId>();
 	/// List of system sets in the schedule
-	protected readonly List<ISystemSet> SystemSets = new ();
+	protected readonly List<ISystemSet> SystemSets = new List<ISystemSet>();
 
 	/// Systems that have not been initialized yet; for system sets, we store the index of the first uninitialized condition
 	/// (all the conditions after that index still need to be initialized)
-	protected readonly List<(NodeId, int)> Uninit = new ();
+	protected readonly List<(NodeId, int)> Uninit = new List<(NodeId, int)>();
 
 	/// <summary>
 	///     Returns the set at the given <see cref="NodeId" />, if it exists
@@ -86,7 +86,7 @@ public class SystemGraph
 
 
 	/// <summary>
-	///     Provides an iterator over all <see cref="ISystem" />s in this schedule, along with their <see cref="Condition" />
+	///     Provides an iterator over all <see cref="ISystem" />s in this schedule, along with their <see cref="ICondition" />
 	///     s
 	/// </summary>
 	/// <returns></returns>
@@ -129,11 +129,11 @@ public class SystemGraph
 	///     Must be called after <see cref="BuildSchedule" /> to be non-empty.
 	/// </summary>
 	/// <returns></returns>
-	public IReadOnlyCollection<(NodeId, NodeId, ulong[])> GetConflictingSystems() => ConflictingSystems.AsReadOnly();
+	public IReadOnlyCollection<(NodeId, NodeId, uint[])> GetConflictingSystems() => ConflictingSystems.AsReadOnly();
 
 	protected ProcessConfigsResult ProcessConfig<TNode>(NodeConfig<TNode> config, bool collectNodes)
 	{
-		List<NodeId> nodes = new ();
+		List<NodeId> nodes = new List<NodeId>();
 		var id = config.ProcessConfig(this);
 		if (collectNodes) {
 			nodes.Add(id);
@@ -528,7 +528,7 @@ public class SystemGraph
 
 	public void VizAlgo(GraphvizAlgorithm<NodeId, Edge<NodeId>> algo)
 	{
-		algo.FormatVertex += (sender, args) => {
+		algo.FormatVertex += (_, args) => {
 			args.VertexFormat.Label = GetNodeName(args.Vertex);
 			if (args.Vertex.IsSet) {
 				args.VertexFormat.Shape = GraphvizVertexShape.Diamond;
@@ -575,13 +575,13 @@ public class SystemGraph
 		return newSchedule;
 	}
 
-	private List<(NodeId, NodeId, ulong[])> GetConflictingSystems(
+	private List<(NodeId, NodeId, uint[])> GetConflictingSystems(
 		List<(NodeId, NodeId)> flatResultsDisconnected,
 		UndirectedGraph<NodeId, Edge<NodeId>> ambiguousWithFlattened,
 		FixedBitSet ignoredAmbiguities
 	)
 	{
-		var conflictingSystems = new List<(NodeId, NodeId, ulong[])>();
+		var conflictingSystems = new List<(NodeId, NodeId, uint[])>();
 		foreach (var (a, b) in flatResultsDisconnected) {
 			if (ambiguousWithFlattened.ContainsEdge(a, b) || AmbiguousWithAll.Contains(a) || AmbiguousWithAll.Contains(b)) {
 				continue;
@@ -975,7 +975,7 @@ public class SystemGraph
 		}
 	}
 
-	private void OptionallyCheckConflicts(World world, List<(NodeId, NodeId, ulong[])> conflicts)
+	private void OptionallyCheckConflicts(World world, List<(NodeId, NodeId, uint[])> conflicts)
 	{
 		if (Config.ThrowAmbiguousErrors) {
 			if (conflicts.Count > 0) {
@@ -986,7 +986,7 @@ public class SystemGraph
 	}
 
 
-	private string GetConflictsErrorMessage(World world, List<(NodeId, NodeId, ulong[])> ambiguities)
+	private string GetConflictsErrorMessage(World world, List<(NodeId, NodeId, uint[])> ambiguities)
 	{
 		var nAmbiguities = ambiguities.Count;
 		var message = $"{nAmbiguities} pairs of systems with conflicting data access have indeterminate execution order.\n" +

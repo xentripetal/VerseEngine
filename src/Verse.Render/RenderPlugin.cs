@@ -30,8 +30,8 @@ public partial class RenderPlugin : IPlugin
 			AddSchedule(startupSchedule).
 			AddSchedule(extractSchedule).
 			AddSchedule(BaseRenderSchedule()).
-			InitRes(new RenderGraph()). // 
-			InitRes(app.World.GetResMut<AssetServer>().Value!).
+			InsertResource(new RenderGraph()). // 
+			InsertResource(app.World.Resource<AssetServer>()).
 			//.add_systems(ExtractSchedule, PipelineCache::extract_shaders)
 			AddSystems(RenderSchedules.Render, FuncSystem.Of<World, ResMut<ScheduleContainer>>(ApplyExtractCommands).InSet(RenderSets.ExtractCommands)).
 			AddSchedulable(new RenderGraphRunner()).
@@ -42,21 +42,21 @@ public partial class RenderPlugin : IPlugin
 
 			if (runStartup) {
 				// TODO improve this
-				renderWorld.SetRes(mainWorld.GetRes<GraphicsDevice>().Value);
+				renderWorld.InsertResource(mainWorld.Resource<GraphicsDevice>());
 				renderWorld.RunSchedule(RenderSchedules.Startup);
 				runStartup = false;
 			}
 
 
-			renderWorld.SetRes(new MainWorld(mainWorld));
+			renderWorld.InsertResource(new MainWorld(mainWorld));
 			renderWorld.RunSchedule(RenderSchedules.Extract);
-			renderWorld.RemoveRes<MainWorld>();
+			renderWorld.RemoveResource<MainWorld>();
 		});
 
 
 		var timeChannel = Channel.CreateBounded<DateTime>(2);
-		renderApp.InitRes(timeChannel.Writer);
-		app.InitRes(timeChannel.Reader);
+		renderApp.InsertResource(timeChannel.Writer);
+		app.InsertResource(timeChannel.Reader);
 		app.InsertSubApp(renderApp);
 	}
 

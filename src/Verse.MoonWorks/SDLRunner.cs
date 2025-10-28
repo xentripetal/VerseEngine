@@ -13,7 +13,7 @@ public class SDLRunner
 
 	public AppExit Run(App app)
 	{
-		app.InitRes(SDLApp);
-		return SDLApp.DirectRun();
+		app.InsertResource(SDLApp);
+		return SDLApp.Run([]);
 	}
 }

@@ -18,13 +18,29 @@ public class App : IDisposable
 	public static AppExit RunOnce(App app)
 	{
 		while (app.PluginsState() == Core.PluginsState.Adding) {
-			// tick
+			Thread.Sleep(1);
 		}
 		app.Finish();
 		app.Cleanup();
 		app.Update();
 		return app.ShouldExit() ?? AppExit.Success();
 	}
+
+	public static AppExit Run(App app)
+	{
+		while (app.PluginsState() == Core.PluginsState.Adding) {
+			Thread.Sleep(1);
+		}
+		var exit = app.ShouldExit();
+		while (exit == null) {
+			app.Update();
+			exit = app.ShouldExit();
+		}
+		app.Finish();
+		app.Cleanup();
+		return exit.Value;
+	}
+
 	internal App(RunnerHandler runFn, SubApp main, params SubApp[] subApps)
 	{
 		SubApps = new SubApps(main, subApps);
@@ -35,9 +51,9 @@ public class App : IDisposable
 	{
 		var main = new SubApp("main", Schedules.Main, Schedules.Update);
 		var app = new App(RunOnce, main);
+		app.AddMessage<AppExit>();
 		app.AddPlugin<MainSchedulePlugin>();
 		// TODO add event systems
-		app.AddEvent<AppExit>();
 		return app;
 	}
 
@@ -132,16 +148,23 @@ public class App : IDisposable
 		SubApps.Main.AddSystems(node);
 		return this;
 	}
-	public App InitRes<T>()
+	public App InitResource<T>() where T : IFromWorld<T>
 	{
-		SubApps.Main.InitRes<T>();
+		SubApps.Main.InitResource<T>();
 		return this;
 	}
-	public App InitRes<T>(T value)
+	public App InsertResource<T>(T value)
 	{
-		SubApps.Main.InitRes(value);
+		SubApps.Main.InsertResource(value);
 		return this;
 	}
+	
+	public App InitResource<T>(T value)
+	{
+		SubApps.Main.InitResource(value);
+		return this;
+	}
+	
 	public App ConfigureSets(string schedule, IIntoSystemSetConfigs configs)
 	{
 		SubApps.Main.ConfigureSets(schedule, configs);
@@ -176,19 +199,14 @@ public class App : IDisposable
 		SubApps.Main.IgnoreAmbiguity(schedule, a, b);
 		return this;
 	}
-	public App AddEvent<T>() where T : notnull
-	{
-		SubApps.Main.AddEvent<T>();
-		return this;
-	}
 
 	public App AddMessage<T>() where T : notnull
 	{
 		// TODO refactor into an actual message vs events system
-		SubApps.Main.AddEvent<T>();
+		SubApps.Main.AddMessage<T>();
 		return this;
 	}
-	
+
 	public App AddPlugin(IPlugin plugin)
 	{
 		SubApps.Main.AddPluginToApp(this, plugin);
@@ -217,7 +235,7 @@ public class App : IDisposable
 
 	public AppExit? ShouldExit()
 	{
-		var reader = EventReader<AppExit>.Generate(World);
+		var reader = World.Resource<Messages<AppExit>>().Reader;
 		if (reader.IsEmpty) {
 			return null;
 		}

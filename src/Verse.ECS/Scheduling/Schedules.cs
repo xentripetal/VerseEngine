@@ -8,9 +8,9 @@ namespace Verse.ECS.Scheduling;
 ///     <see cref="Schedule" />
 /// </summary>
 /// <remarks>Based on bevy_ecs::schedule:Schedules</remarks>
-public class ScheduleContainer
+public class ScheduleContainer : IFromWorld<ScheduleContainer>
 {
-	public HashSet<ulong> IgnoredSchedulingAmbiguities = new ();
+	public HashSet<ComponentId> IgnoredSchedulingAmbiguities = new ();
 	protected Dictionary<string, Schedule> Schedules = new ();
 
 	/// <summary>
@@ -59,17 +59,11 @@ public class ScheduleContainer
 		}
 	}
 
-	public void AllowAmbiguousComponent(ulong componentId)
+	public void AllowAmbiguousComponent(ComponentId id)
 	{
-		IgnoredSchedulingAmbiguities.Add(componentId);
+		IgnoredSchedulingAmbiguities.Add(id);
 	}
-
-	public void AllowAmbiguousComponent<T>(World world) where T : struct
-	{
-		var c = world.Registry.GetSlimComponent<T>();
-		AllowAmbiguousComponent(c.Id);
-	}
-
+	
 	public void IgnoreAmbiguity(string schedule, IIntoSystemSet a, IIntoSystemSet b)
 	{
 		if (!Schedules.TryGetValue(schedule, out var sched)) {
@@ -93,4 +87,5 @@ public class ScheduleContainer
 		}
 		sched.ConfigureSets(configs.IntoConfigs());
 	}
+	public static ScheduleContainer FromWorld(World world) => new ();
 }

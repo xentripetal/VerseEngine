@@ -25,7 +25,7 @@ public struct With<T> : IFilter<With<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	readonly bool IQueryIterator<With<T>>.MoveNext() => true;
 
-	public readonly void SetTicks(uint lastRun, uint thisRun) { }
+	public readonly void SetTicks(Tick lastRun, Tick thisRun) { }
 }
 
 /// <summary>
@@ -51,7 +51,7 @@ public ref struct Without<T> : IFilter<Without<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	readonly bool IQueryIterator<Without<T>>.MoveNext() => true;
 
-	public readonly void SetTicks(uint lastRun, uint thisRun) { }
+	public readonly void SetTicks(Tick lastRun, Tick thisRun) { }
 }
 
 /// <summary>
@@ -78,7 +78,7 @@ public ref struct Optional<T> : IFilter<Optional<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	readonly bool IQueryIterator<Optional<T>>.MoveNext() => true;
 
-	public readonly void SetTicks(uint lastRun, uint thisRun) { }
+	public readonly void SetTicks(Tick lastRun, Tick thisRun) { }
 }
 
 /// <summary>
@@ -92,7 +92,7 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 	private Ptr<uint> _stateRow;
 	private int _row, _count;
 	private nint _size;
-	private uint _lastRun, _thisRun;
+	private Tick _lastRun, _thisRun;
 
 	private Changed(QueryIterator iterator)
 	{
@@ -143,7 +143,7 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 		return _size > 0 && _stateRow.Value > _lastRun; //&& _stateRow.Value < _thisRun;
 	}
 
-	public void SetTicks(uint lastRun, uint thisRun)
+	public void SetTicks(Tick lastRun, Tick thisRun)
 	{
 		_lastRun = lastRun;
 		_thisRun = thisRun;
@@ -161,7 +161,7 @@ public ref struct Added<T> : IFilter<Added<T>>
 	private Ptr<uint> _stateRow;
 	private int _row, _count;
 	private nint _size;
-	private uint _lastRun, _thisRun;
+	private Tick _lastRun, _thisRun;
 
 	private Added(QueryIterator iterator)
 	{
@@ -211,7 +211,7 @@ public ref struct Added<T> : IFilter<Added<T>>
 		return _size > 0 && _stateRow.Value >= _lastRun && _stateRow.Value < _thisRun;
 	}
 
-	public void SetTicks(uint lastRun, uint thisRun)
+	public void SetTicks(Tick lastRun, Tick thisRun)
 	{
 		_lastRun = lastRun;
 		_thisRun = thisRun;
@@ -237,7 +237,7 @@ public ref struct Writes<T> : IFilter<Writes<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	readonly bool IQueryIterator<Writes<T>>.MoveNext() => true;
 
-	public readonly void SetTicks(uint lastRun, uint thisRun) { }
+	public readonly void SetTicks(Tick lastRun, Tick thisRun) { }
 }
 
 public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
@@ -247,15 +247,15 @@ public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
 	private Ptr<uint> _stateRow;
 	private int _row, _count;
 	private nint _size;
-	private uint _lastRun, _thisRun;
+	private Tick _lastRun, _thisRun;
 
 	private MarkChanged(QueryIterator iterator)
 	{
 		_iterator = iterator;
 		_row = -1;
 		_count = -1;
-		_lastRun = 0;
-		_thisRun = 0;
+		_lastRun = new Tick();
+		_thisRun = new Tick();
 	}
 
 	[UnscopedRef]
@@ -263,7 +263,6 @@ public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
 
 	public static void Build(QueryBuilder builder)
 	{
-		// builder.With<T>();
 	}
 
 	static MarkChanged<T> IFilter<MarkChanged<T>>.CreateIterator(QueryIterator iterator) => new MarkChanged<T>(iterator);
@@ -295,13 +294,13 @@ public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
 		}
 
 		if (_size > 0) {
-			_stateRow.Value = _thisRun;
+			_stateRow.Value = _thisRun.Value;
 		}
 
 		return true;
 	}
 
-	public void SetTicks(uint lastRun, uint thisRun)
+	public void SetTicks(Tick lastRun, Tick thisRun)
 	{
 		_lastRun = lastRun;
 		_thisRun = thisRun;
@@ -319,7 +318,7 @@ public ref struct QueryIter<D, F>
 	private D _dataIterator;
 	private F _filterIterator;
 
-	internal QueryIter(uint lastRun, uint thisRun, QueryIterator iterator)
+	internal QueryIter(Tick lastRun, Tick thisRun, QueryIterator iterator)
 	{
 		_dataIterator = D.CreateIterator(iterator);
 		_filterIterator = F.CreateIterator(iterator);

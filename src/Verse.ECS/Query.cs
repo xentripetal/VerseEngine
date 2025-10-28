@@ -17,13 +17,13 @@ public sealed class QueryBuilder
 	public QueryBuilder With<T>(TermAccess access = TermAccess.Read) where T : struct => With(World.GetComponent<T>().Id, access);
 
 
-	public QueryBuilder With(EcsID id, TermAccess access = TermAccess.Read)
+	public QueryBuilder With(ComponentId id, TermAccess access = TermAccess.Read)
 		=> Term(new WithTerm(id, access));
 
 	public QueryBuilder Without<T>() where T : struct
 		=> Without(World.GetComponent<T>().Id);
 
-	public QueryBuilder Without(EcsID id)
+	public QueryBuilder Without(ComponentId id)
 		=> Term(new WithoutTerm(id));
 
 	public QueryBuilder Optional<T>() where T : struct
@@ -33,7 +33,7 @@ public sealed class QueryBuilder
 		return Optional(cmp.Id);
 	}
 
-	public QueryBuilder Optional(EcsID id)
+	public QueryBuilder Optional(ComponentId id)
 		=> Term(new OptionalTerm(id));
 
 	public QueryBuilder Term(IQueryTerm term)
@@ -94,14 +94,14 @@ public sealed class Query
 		return _matchedArchetypes.Sum(static s => s.Count);
 	}
 
-	public QueryIterator Iter(uint tick)
+	public QueryIterator Iter(Tick tick)
 	{
 		Match();
 
 		return Iter(CollectionsMarshal.AsSpan(_matchedArchetypes), 0, -1, tick);
 	}
 
-	public QueryIterator Iter(EcsID entity, uint tick)
+	public QueryIterator Iter(EcsID entity, Tick tick)
 	{
 		Match();
 
@@ -118,7 +118,7 @@ public sealed class Query
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, uint tick) => new QueryIterator(archetypes, Terms, _indices, start, count, tick);
+	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, Tick tick) => new QueryIterator(archetypes, Terms, _indices, start, count, tick);
 
 	public FilteredAccess BuildAccess()
 	{
@@ -158,11 +158,11 @@ public ref struct QueryIterator
 	private readonly ReadOnlySpan<IQueryTerm> _terms;
 	private readonly Span<int> _indices;
 	private readonly int _start, _startSafe, _count;
-	private readonly uint _tick;
+	private readonly Tick _tick;
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count, uint tick)
+	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count, Tick tick)
 	{
 		_archetypeIterator = archetypes.GetEnumerator();
 		_terms = terms;

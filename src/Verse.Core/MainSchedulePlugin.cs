@@ -23,8 +23,8 @@ public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlu
 		app.AddSchedule(mainSchedule).
 			AddSchedule(fixedMainSchedule).
 			AddSchedule(fixedMainLoopSchedule).
-			InitRes(mainScheduleOrder).
-			InitRes(fixedMainScheduleOrder);
+			InsertResource(mainScheduleOrder).
+			InsertResource(fixedMainScheduleOrder);
 
 		InitSchedules(app, mainScheduleOrder.StartupLabels);
 		InitSchedules(app, mainScheduleOrder.Labels);
@@ -52,22 +52,22 @@ public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlu
 
 	private static void RunMainSystems(World world, Local<bool> ranAtLeastOnce)
 	{
-		var schedules = world.MustGetRes<MainScheduleOrder>();
+		var schedules = world.Resource<MainScheduleOrder>();
 		if (!ranAtLeastOnce.Value) {
-			foreach (var schedule in schedules.Value!.StartupLabels) {
+			foreach (var schedule in schedules.StartupLabels) {
 				world.RunSchedule(schedule);
 			}
 			ranAtLeastOnce.Value = true;
 		}
-		foreach (var schedule in schedules.Value!.Labels) {
+		foreach (var schedule in schedules.Labels) {
 			world.RunSchedule(schedule);
 		}
 	}
 
 	private static void RunFixedMainSystems(World world)
 	{
-		var schedules = world.MustGetRes<FixedMainScheduleOrder>();
-		foreach (var schedule in schedules.Value!.Labels) {
+		var schedules = world.Resource<FixedMainScheduleOrder>();
+		foreach (var schedule in schedules.Labels) {
 			world.RunSchedule(schedule);
 		}
 	}

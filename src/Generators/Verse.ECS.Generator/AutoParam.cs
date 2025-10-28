@@ -26,9 +26,8 @@ public struct AutoParam
 			}
 		}
 		var kind = ParamType.Unknown;
-		var iinto = typeInfo.AllInterfaces.FirstOrDefault(x => x.Name.Equals("IIntoSystemParam"));
-		if (iinto is not null) {
-			kind = ParamType.IInto;
+		if (IsFromWorldParam(typeInfo)) {
+			kind = ParamType.IFromWorld;
 		} else {
 			kind = ParamType.ResMut;
 			if (access is AccessModifier.In or AccessModifier.RefReadonly) {
@@ -45,10 +44,26 @@ public struct AutoParam
 		};
 	}
 
+	private static bool IsFromWorldParam(ITypeSymbol type)
+	{
+		// has IFromWorld and ISystemParam
+		bool hasISystemParam = false;
+		bool hasFromWorld = false;
+		foreach (var iface in type.AllInterfaces) {
+			if (iface.Name.Equals("ISystemParam")) {
+				hasISystemParam = true;
+			}
+			if (iface.Name.Equals("IFromWorld")) {
+				hasFromWorld = true;
+			}
+		}
+		return hasISystemParam && hasFromWorld;
+	}
+
 	public enum ParamType
 	{
 		Unknown,
-		IInto,
+		IFromWorld,
 		Res,
 		ResMut,
 	}
@@ -91,9 +106,9 @@ public struct AutoParam
 	public string GenInitializer()
 	{
 		return Type switch {
-			ParamType.IInto  => $"{TypeToken}.Generate(world)",
-			ParamType.Res    => $"world.GetRes<{TypeToken}>()",
-			ParamType.ResMut => $"world.GetResMut<{TypeToken}>()",
+			ParamType.IFromWorld  => $"{TypeToken}.FromWorld(world)",
+			ParamType.Res    => $"Res<{TypeToken}>.FromWorld(world)",
+			ParamType.ResMut => $"ResMut<{TypeToken}>.FromWorld(world)",
 			_                => "default"
 		};
 	}
@@ -101,7 +116,7 @@ public struct AutoParam
 	public string GenCaller(string paramName)
 	{
 		var modifier = AccessModifierText;
-		if (Type == ParamType.IInto)
+		if (Type == ParamType.IFromWorld)
 			return modifier + paramName;
 		if (Type == ParamType.ResMut || Type == ParamType.Res)
 			return $"{modifier}{paramName}.Value";

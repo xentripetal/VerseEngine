@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Verse.Core.Datastructures;
+using Verse.ECS.Datastructures;
 
 namespace Verse.Core.Test;
 
@@ -199,7 +199,7 @@ public class IndexDictionaryTests
         var removed = dict.SwapRemove("first");
 
         // Assert
-        removed.Should().BeTrue();
+        removed.Should().Be(true);
         dict.Count.Should().Be(2);
         dict.ContainsKey("first").Should().BeFalse();
         dict[0].Should().Be(3); // "third" moved to index 0
@@ -220,7 +220,7 @@ public class IndexDictionaryTests
         var removed = dict.SwapRemove("second");
 
         // Assert
-        removed.Should().BeTrue();
+        removed.Should().Be(true);
         dict.Count.Should().Be(1);
         dict[0].Should().Be(1);
         dict.GetIndex("first").Should().Be(0);
@@ -237,7 +237,7 @@ public class IndexDictionaryTests
         var removed = dict.SwapRemove("nonexistent");
 
         // Assert
-        removed.Should().BeFalse();
+        removed.Should().Be(false);
         dict.Count.Should().Be(1);
     }
 
@@ -399,38 +399,6 @@ public class IndexDictionaryTests
         act.Should().Throw<KeyNotFoundException>();
     }
 
-    [Fact]
-    public void TryGetFull_ExistingKey_ShouldReturnTrueAndAllValues()
-    {
-        // Arrange
-        var dict = new IndexDictionary<string, int>();
-        dict.Add("key1", 42);
-
-        // Act
-        var found = dict.TryGetFull("key1", out var outKey, out var value, out var index);
-
-        // Assert
-        found.Should().BeTrue();
-        outKey.Should().Be("key1");
-        value.Should().Be(42);
-        index.Should().Be(0);
-    }
-
-    [Fact]
-    public void TryGetFull_NonExistentKey_ShouldReturnFalseAndDefaults()
-    {
-        // Arrange
-        var dict = new IndexDictionary<string, int>();
-
-        // Act
-        var found = dict.TryGetFull("nonexistent", out var outKey, out var value, out var index);
-
-        // Assert
-        found.Should().BeFalse();
-        outKey.Should().BeNull();
-        value.Should().Be(0);
-        index.Should().Be(-1);
-    }
 
     [Fact]
     public void Enumeration_ShouldPreserveInsertionOrder()

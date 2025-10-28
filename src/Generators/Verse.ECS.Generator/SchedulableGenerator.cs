@@ -70,7 +70,7 @@ public class SchedulableGenerator : IIncrementalGenerator
 	private static void Build(SourceProductionContext ctx, Schedulable builder)
 	{
 		var file = builder.Generate(ctx);
-		var path = $"{builder.Namespace}.{builder.ClassName}.g.cs";
+		var path = $"{builder.Namespace}.{builder.SafeClassName}.g.cs";
 		ctx.AddSource(path, SourceText.From(CodeFormatter.Format(file), Encoding.UTF8));
 	}
 
@@ -103,11 +103,19 @@ public class SchedulableGenerator : IIncrementalGenerator
 			}
 			if (parsedSystems.Count == 0)
 				return ParseValue<Schedulable>.Empty();
+			
+			var generics = "";
+			if (syntax is ClassDeclarationSyntax classDecl && classDecl.TypeParameterList != null) {
+				generics = classDecl.TypeParameterList.ToString();
+			}
+			var safeGenerics = generics.Replace('<', '_').Replace('>', '_').Replace(',', '_').Replace(" ", "");
+			
 			return ParseValue<Schedulable>.Ok(
 				new Schedulable {
 					Namespace = classSymbol.ContainingNamespace.ToDisplayString(),
-					ClassName = classSymbol.Name,
+					ClassName = classSymbol.Name + generics,
 					Systems = parsedSystems,
+					SafeClassName = classSymbol.Name  + safeGenerics,
 					Syntax = syntax
 				});
 		}
@@ -115,6 +123,7 @@ public class SchedulableGenerator : IIncrementalGenerator
 		public List<AutoSystemFunc> Systems;
 		public string Namespace;
 		public string ClassName;
+		public string SafeClassName;
 		public TypeDeclarationSyntax Syntax;
 
 		public string Generate(SourceProductionContext ctx)

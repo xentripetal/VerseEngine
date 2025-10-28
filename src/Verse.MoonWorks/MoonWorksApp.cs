@@ -27,8 +27,8 @@ public class MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags)
 		TitleStorage = new TitleStorage();
 		UserStorage = new UserStorage(AppInfo);
 		// Is this safe? I think so? plugins should be Building on main thread so at this point we should be on main thread
-		VerseApp.InitRes(TitleStorage);
-		VerseApp.InitRes(UserStorage);
+		VerseApp.InsertResource(TitleStorage);
+		VerseApp.InsertResource(UserStorage);
 		return SDL.SDL_AppResult.SDL_APP_CONTINUE;
 	}
 
@@ -56,16 +56,16 @@ public class MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags)
 		switch (e->type) {
 			// Send this down to ECS so systems can react to it. It will get picked up during Iterate and shut down from there.
 			case (uint)SDL.SDL_EventType.SDL_EVENT_QUIT:
-				World.WriteEvent(AppExit.Success());
+				World.WriteMessage(AppExit.Success());
 				break;
 			case (uint)SDL.SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-				World.WriteEvent(new CloseWindowRequest(e->window.windowID));
+				World.WriteMessage(new CloseWindowRequest(e->window.windowID));
 				break;
 			default:
 				// If its something we don't have an explicit case for, just push the raw event down.
 				SDL.SDL_Event copy;
 				copy = *e;
-				World.WriteEvent(copy);
+				World.WriteMessage(copy);
 				break;
 		}
 		return SDL.SDL_AppResult.SDL_APP_CONTINUE;

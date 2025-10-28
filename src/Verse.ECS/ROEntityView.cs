@@ -82,13 +82,8 @@ public readonly struct ROEntityView : IEquatable<EcsID>, IEquatable<ROEntityView
 
 	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly bool Has(EcsID id)
+	public readonly bool Has(ComponentId id)
 		=> _world.Has(Id, id);
-
-	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly bool Has(ROEntityView id)
-		=> _world.Has(Id, id.Id);
 
 	/// <inheritdoc cref="World.Exists" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

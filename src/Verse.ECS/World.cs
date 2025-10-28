@@ -18,16 +18,25 @@ public sealed partial class World : IDisposable
 	private ulong _archetypeGeneration;
 
 	internal Archetype Root { get; }
+	internal Resources Resources { get; }
 	internal EcsID LastArchetypeId { get; set; }
 	internal RelationshipEntityMapper RelationshipEntityMapper { get; }
 	internal NamingEntityMapper NamingEntityMapper { get; }
+
+	/// <summary>
+	/// Reads the current change tick of this world.
+	/// </summary>
+	public Tick ChangeTick()
+	{
+		return new Tick(_ticks);
+	}
 
 	public uint Update()
 	{
 		++_ticks;
 		// TODO track component removals and clear here
 		EventRegistry.Update(this, _ticks);
-		
+
 		return _ticks;
 	}
 
@@ -52,14 +61,7 @@ public sealed partial class World : IDisposable
 	public ref readonly SlimComponent GetComponent<T>() where T : struct
 	{
 		// todo - is ref here actually faster?
-		ref readonly var lookup = ref Registry.GetSlimComponent<T>();
-		ref var idx = ref _cachedComponents.GetOrCreate(lookup.Id, out var exists);
-		if (!exists) {
-			idx = Entity(lookup.Id).Set(lookup).Id;
-			NamingEntityMapper.SetName(idx, Component<T>.StaticName);
-		}
-
-		return ref lookup;
+		return ref Registry.GetSlimComponent<T>();
 	}
 
 
@@ -71,19 +73,19 @@ public sealed partial class World : IDisposable
 		return ref record;
 	}
 
-	private void Detach(EcsID entity, ulong id)
+	private void Detach(EcsID entity, ComponentId component)
 	{
 		ref var record = ref GetRecord(entity);
 		var oldArch = record.Archetype;
 
-		if (oldArch.GetAnyIndex(id) < 0)
+		if (oldArch.GetAnyIndex(component) < 0)
 			return;
 
-		OnComponentUnset?.Invoke(this, entity, new SlimComponent(id, -1));
+		OnComponentUnset?.Invoke(this, entity, new SlimComponent(component, -1));
 
 		// TODO: do we need to lock
 
-		var foundArch = oldArch.TraverseLeft(id);
+		var foundArch = oldArch.TraverseLeft(component);
 		if (foundArch == null && oldArch.All.Length - 1 <= 0) {
 			foundArch = Root;
 		}
@@ -91,7 +93,7 @@ public sealed partial class World : IDisposable
 		if (foundArch == null) {
 			var hash = 0ul;
 			foreach (ref readonly var cmp in oldArch.All.AsSpan()) {
-				if (cmp.Id != id)
+				if (cmp.Id != component)
 					hash = UnorderedSetHasher.Combine(hash, cmp.Id);
 			}
 
@@ -99,11 +101,11 @@ public sealed partial class World : IDisposable
 				var arr = new SlimComponent[oldArch.All.Length - 1];
 				for (int i = 0, j = 0; i < oldArch.All.Length; ++i) {
 					ref readonly var item = ref oldArch.All[i];
-					if (item.Id != id)
+					if (item.Id != component)
 						arr[j++] = item;
 				}
 
-				foundArch = NewArchetype(oldArch, arr, id);
+				foundArch = NewArchetype(oldArch, arr, component);
 			}
 		}
 
@@ -169,7 +171,7 @@ public sealed partial class World : IDisposable
 		return (component.IsTag ? null : record.Chunk.Columns![column].Data, record.Row);
 	}
 
-	internal bool IsAttached(ref EcsRecord record, EcsID id)
+	internal bool IsAttached(ref EcsRecord record, ComponentId id)
 	{
 		return record.Archetype.HasIndex(id);
 	}

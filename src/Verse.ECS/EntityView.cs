@@ -71,16 +71,11 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	/// <inheritdoc cref="World.Add(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Add(EcsID id)
+	public readonly EntityView Add(ComponentId id)
 	{
 		World.Add(Id, id);
 		return this;
 	}
-
-	/// <inheritdoc cref="World.Add(EcsID, EcsID)" />
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Add(EntityView id)
-		=> Add(id.Id);
 
 	/// <inheritdoc cref="World.Unset{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,18 +87,13 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	/// <inheritdoc cref="World.Unset(EcsID, EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Unset(EcsID id)
+	public readonly EntityView Unset(ComponentId id)
 	{
 		World.Unset(Id, id);
 		return this;
 	}
 	
 	public readonly ROEntityView AsReadOnly() => new ROEntityView(World, Id);
-
-	/// <inheritdoc cref="World.Unset(EcsID, EcsID)" />
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Unset(EntityView id)
-		=> Unset(id.Id);
 
 	/// <inheritdoc cref="World.GetSlimType" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -124,16 +114,9 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly bool Has<T>() where T : struct
 		=> World.Has<T>(Id);
-
-	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly bool Has(EcsID id)
-		=> World.Has(Id, id);
-
-	/// <inheritdoc cref="World.Has(EcsID, EcsID)" />
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly bool Has(EntityView id)
-		=> World.Has(Id, id.Id);
+	
+	/// <inheritdoc cref="World.Has{T}(ulong)"/>
+	public readonly bool Has(ComponentId id) => World.Has(Id, id);
 
 	/// <inheritdoc cref="World.Delete" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

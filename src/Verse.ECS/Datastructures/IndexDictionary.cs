@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Verse.Core.Datastructures;
+namespace Verse.ECS.Datastructures;
 
 public class IndexDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
 	where TKey : notnull

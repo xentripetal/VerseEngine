@@ -6,13 +6,6 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj"/>
-        <ProjectReference Include="..\..\src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj">
-            <OutputItemType>Analyzer</OutputItemType>
-            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-        </ProjectReference>
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Schedules\" />
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="Verse.ECS.Tests" />

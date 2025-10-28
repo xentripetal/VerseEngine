@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using Serilog;
+using Verse.Assets;
 using Verse.Core;
 using Verse.MoonWorks;
 using Verse.Render;
@@ -21,6 +22,7 @@ app.Update();
 **/
 
 var app = App.Default();
+app.AddPlugin(new AssetPlugin());
 app.AddPlugin(new MoonWorksPlugin(new AppInfo("Xentripetal", "ProjectVerse")));
 app.AddPlugin(new RenderPlugin());
 app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));

@@ -1,7 +1,6 @@
 using System.Collections;
-using System.Diagnostics;
 
-namespace Verse.ECS;
+namespace Verse.ECS.Datastructures;
 
 [DebuggerDisplay("Count = {Count}")]
 public class OrderedSet<T> : ISet<T>, IReadOnlyOrderedSet<T> where T : notnull

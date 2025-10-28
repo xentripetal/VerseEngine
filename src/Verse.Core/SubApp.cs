@@ -36,7 +36,7 @@ public class SubApp : IDisposable
 	public SubApp(string name, string updateSchedule, string defaultSchedule, ExecutorKind kind = ExecutorKind.SingleThreaded)
 	{
 		World = new World();
-		World.SetRes(new ScheduleContainer());
+		World.InitResource<ScheduleContainer>();
 		Name = name;
 		ExecutorKind = kind;
 		Plugins = new List<IPlugin>();
@@ -119,11 +119,7 @@ public class SubApp : IDisposable
 
 	private ScheduleContainer GetSchedules()
 	{
-		var res = World.MustGetResMut<ScheduleContainer>();
-		if (res.Value == null) {
-			throw new ArgumentException("ScheduleContainer not found");
-		}
-		return res.Value;
+		return World.Resource<ScheduleContainer>();
 	}
 
 	public SubApp AddSystems(string schedule, IIntoSystemConfigs systems)
@@ -132,14 +128,21 @@ public class SubApp : IDisposable
 		return this;
 	}
 	public SubApp AddSystems(IIntoSystemConfigs node) => AddSystems(DefaultSchedule, node);
-	public SubApp InitRes<T>()
+	public SubApp InitResource<T>() where T : IFromWorld<T>
 	{
-		World.InitRes<T>();
+		World.InitResource<T>();
 		return this;
 	}
-	public SubApp InitRes<T>(T value)
+
+	public SubApp InitResource<T>(T value)
 	{
-		World.SetRes(value);
+		World.InitResource<T>(value);
+		return this;
+	}
+	
+	public SubApp InsertResource<T>(T value)
+	{
+		World.InsertResource(value);
 		return this;
 	}
 	public SubApp ConfigureSets(string schedule, IIntoSystemSetConfigs configs)
@@ -185,9 +188,9 @@ public class SubApp : IDisposable
 		GetSchedules().IgnoreAmbiguity(schedule, a, b);
 		return this;
 	}
-	public SubApp AddEvent<T>() where T : notnull
+	public SubApp AddMessage<T>() where T : notnull
 	{
-		World.RegisterEvent<T>();
+		World.AddMessage<T>();
 		return this;
 	}
 	public SubApp AddPlugin(IPlugin plugin)
@@ -285,6 +288,7 @@ public class SubApp : IDisposable
 			}
 		}
 	}
+
 }
 
 public enum PluginsState

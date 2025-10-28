@@ -40,26 +40,22 @@ public class AssetServer
 		infoLock.EnterWriteLock();
 		try {
 			infos.HandleProviders.Add(handleProvider.Type, handleProvider);
+			infos.OnDependencyloaded[typeof(T)] = (world, id) => {
+				//     world
+				//         .resource_mut::<Messages<AssetEvent<A>>>()
+				//         .write(AssetEvent::LoadedWithDependencies { id: id.typed() });
+			};
+			
 			// TODO proxy events to world
-			//        fn sender<A: Asset>(world: &mut World, id: UntypedAssetId) {
-			//     world
-			//         .resource_mut::<Messages<AssetEvent<A>>>()
-			//         .write(AssetEvent::LoadedWithDependencies { id: id.typed() });
-			// }
-			// fn failed_sender<A: Asset>(
-			//     world: &mut World,
-			//     id: UntypedAssetId,
-			//     path: AssetPath<'static>,
-			//     error: AssetLoadError,
-			// ) {
-			//     world
-			//         .resource_mut::<Messages<AssetLoadFailedEvent<A>>>()
-			//         .write(AssetLoadFailedEvent {
-			//             id: id.typed(),
-			//             path,
-			//             error,
-			//         });
-			// 
+			infos.OnDependencyFailed[typeof(T)] = (world, id, path, error) => {
+				//     world
+				//         .resource_mut::<Messages<AssetLoadFailedEvent<A>>>()
+				//         .write(AssetLoadFailedEvent {
+				//             id: id.typed(),
+				//             path,
+				//             error,
+				//         });
+			};
 		}
 		finally {
 			infoLock.ExitWriteLock();
@@ -163,8 +159,13 @@ public class AssetServer
 		}
 		catch (AssetLoadException e) {
 			Log.Error(e, "Failed loading asset at {path}", path);
-			SendAssetEvent(InternalAssetEvent.Failed(default, e, path));
+			SendAssetEvent(InternalAssetEvent.Failed(handle?.Id() ?? default, e, path));
 			throw;
+		} catch (Exception e) {
+			Log.Error(e, "Failed loading asset at {path}", path);
+			var ale = new AssetLoadException("Failed loading asset", e);
+			SendAssetEvent(InternalAssetEvent.Failed(handle?.Id() ?? default, ale, path));
+			throw ale;
 		}
 		metaTransform?.Invoke(meta);
 
@@ -240,7 +241,6 @@ public class AssetServer
 			finalHandle = fetchedHandle;
 		}
 		SendLoadedAssetEvent(baseAssetId, asset);
-		;
 		return finalHandle;
 	}
 
@@ -267,44 +267,50 @@ public class AssetServer
 	}
 
 
+
 	private async Task<(IAssetMeta meta, IUntypedAssetLoader loader, Stream stream)> GetMetaLoaderAndReader(AssetPath path, Type? assetType)
 	{
 		var source = sources.GetSource(path.Source);
-		var stream = await source.Read(path.Path);
-
 		try {
-			var metaStream = await source.ReadMeta(path.Path);
-			var rawMeta = minimalMetaSerializer.Deserialize(metaStream);
-			if (rawMeta is not AssetMetaMinimal minimalMeta) {
-				throw new AssetLoadException("Failed to deserialize minimal asset meta");
-			}
-			if (minimalMeta.Asset.Type == AssetActionType.Ignore) {
-				throw new AssetLoadException($"Asset {path.Path} is marked as ignored");
-			}
-			if (minimalMeta.Asset.Type == AssetActionType.Process) {
-				throw new AssetLoadException($"Asset {path.Path} is marked as processed");
-			}
-			if (!TryGetAssetLoaderWithTypeName(minimalMeta.Asset.Name, out var loader)) {
-				throw new AssetLoadException($"Asset {path.Path} has unknown loader type {minimalMeta.Asset.Name}");
-			}
-			IAssetMeta meta;
+			var stream = await source.Read(path.Path);
+
 			try {
-				meta = loader.DeserializeMeta(metaStream);
-			}
-			catch (Exception e) {
-				throw new AssetLoadException("failed to deserialize asset meta", e);
-			}
-			return (meta, loader, stream);
-		}
-		catch (FileNotFoundException) {
-			loadersLock.EnterReadLock();
-			try {
-				if (!loaders.TryFind(null, assetType, null, path, out var loader)) {
-					throw new AssetLoadException($"Could not determine loader type for asset {path}");
+				var metaStream = await source.ReadMeta(path.Path);
+				var rawMeta = minimalMetaSerializer.Deserialize(metaStream);
+				if (rawMeta is not AssetMetaMinimal minimalMeta) {
+					throw new AssetLoadException("Failed to deserialize minimal asset meta");
 				}
-				return (loader.DefaultMeta(), loader, stream);
+				if (minimalMeta.Asset.Type == AssetActionType.Ignore) {
+					throw new AssetLoadException($"Asset {path.Path} is marked as ignored");
+				}
+				if (minimalMeta.Asset.Type == AssetActionType.Process) {
+					throw new AssetLoadException($"Asset {path.Path} is marked as processed");
+				}
+				if (!TryGetAssetLoaderWithTypeName(minimalMeta.Asset.Name, out var loader)) {
+					throw new AssetLoadException($"Asset {path.Path} has unknown loader type {minimalMeta.Asset.Name}");
+				}
+				IAssetMeta meta;
+				try {
+					meta = loader.DeserializeMeta(metaStream);
+				}
+				catch (Exception e) {
+					throw new AssetLoadException("failed to deserialize asset meta", e);
+				}
+				return (meta, loader, stream);
 			}
-			finally { loadersLock.ExitReadLock(); }
+			catch (FileNotFoundException) {
+				loadersLock.EnterReadLock();
+				try {
+					if (!loaders.TryFind(null, assetType, null, path, out var loader)) {
+						throw new AssetLoadException($"Could not determine loader type for asset {path}");
+					}
+					return (loader.DefaultMeta(), loader, stream);
+				}
+				finally { loadersLock.ExitReadLock(); }
+			}
+		}
+		catch (FileNotFoundException e) {
+			throw new AssetLoadException($"Asset file not found at {path}", e);
 		}
 	}
 
@@ -319,8 +325,8 @@ public class AssetServer
 		}
 	}
 
-	public static implicit operator AssetServer(App app) => app.World.MustGetRes<AssetServer>().Value;
-	public static implicit operator AssetServer(World world) => world.MustGetRes<AssetServer>().Value;
+	public static implicit operator AssetServer(App app) => app.World.Resource<AssetServer>();
+	public static implicit operator AssetServer(World world) => world.Resource<AssetServer>();
 	public void ProcessAssetDrops<T>(Assets<T> assets) where T : IAsset
 	{
 		var reader = assets.GetHandleProvider().DropReader;
@@ -346,15 +352,66 @@ public class AssetServer
 			infoLock.ExitWriteLock();
 		}
 	}
-}
 
-/// A system set where events accumulated in [`Assets`] are applied to the [`AssetEvent`] [`Messages`] resource.
-///
-/// [`Messages`]: bevy_ecs::event::Events
-public class AssetEventSystems : StaticSystemSet
-{
-	public static ISystemSet Set => new AssetEventSystems();
-};
+	public LoadState GetLoadState<T>(T intoId) where T : IIntoUntypedAssetId
+	{
+		infoLock.EnterReadLock();
+		try {
+			return infos.Get(intoId.IntoUntypedAssetId())?.LoadState ?? LoadState.NotLoaded;
+		}
+		finally {
+			infoLock.ExitReadLock();
+		}
+	}
+
+	public bool IsLoaded<T>(T intoId) where T : IIntoUntypedAssetId
+	{
+		return GetLoadState(intoId).IsLoaded;
+	}
+
+	public static void HandleInternalAssetEvents(World world)
+	{
+		world.ResourceScope<AssetServer>(server => {
+			server.infoLock.EnterWriteLock();
+			try {
+				while (server.eventReader.TryRead(out var evt)) {
+					switch (evt.Type) {
+						case InternalAssetEvent.EventType.Loaded:
+							server.infos.ProcessAssetLoad(evt.Id, evt.LoadedAsset!, world, server.eventWriter);
+							break;
+						case InternalAssetEvent.EventType.LoadedWithDependencies:
+							server.infos.OnDependencyloaded[evt.Id.Type](world, evt.Id);
+							var assetInfo = server.infos.Get(evt.Id);
+							if (assetInfo != null) {
+								foreach (var notifier in assetInfo.WaitingTasks) {
+									notifier.SetResult();
+								}
+								assetInfo.WaitingTasks.Clear();
+							}
+							break;
+						case InternalAssetEvent.EventType.Failed:
+							server.infos.ProcessAssetFail(evt.Id, evt.Exception!);
+							server.infos.OnDependencyFailed[evt.Id.Type](world, evt.Id, evt.Path, evt.Exception!);
+							Log.Warning("Asset load failed for {id} at {path}: {error}", evt.Id, evt.Path, evt.Exception);
+							break;
+					}
+				}
+				// TODO bevy collects all errors and publishes them to an untyped error message
+				// TODO propagate file change events
+
+				// Remove all completed pending tasks
+				var completedTasks = server.infos.PendingTasks.Where(kv => kv.Value.IsCompleted).Select(kv => kv.Key).ToList();
+				foreach (var key in completedTasks) {
+					server.infos.PendingTasks.Remove(key);
+				}
+
+			}
+			finally {
+				server.infoLock.ExitWriteLock();
+			}
+		});
+	}
+}
 
 public class AssetSources
 {
@@ -364,7 +421,7 @@ public class AssetSources
 		this.sources = sources;
 	}
 
-	public struct Builder : IDefault<Builder>
+	public class Builder : IDefault<Builder>
 	{
 		private Dictionary<string, IAssetSource> sources = new ();
 		private IAssetSource? DefaultSource;
@@ -375,9 +432,6 @@ public class AssetSources
 
 		public void AddSource(IAssetSource source, string key)
 		{
-			if (sources == null) {
-				sources = new Dictionary<string, IAssetSource>();
-			}
 			if (key == "") {
 				if (DefaultSource == null) {
 					throw new ArgumentException("Cannot replace default asset source with AddSource. Use ReplaceDefault.");
@@ -395,7 +449,11 @@ public class AssetSources
 
 		public AssetSources Build()
 		{
-			return new AssetSources(DefaultSource ?? throw new InvalidOperationException("No default source"), sources);
+			if (DefaultSource == null) {
+				DefaultSource = new FileSystemSource(".");
+				Log.Information("No default asset source specified. Using FileSystemSource at root directory.");
+			}
+			return new AssetSources(DefaultSource, sources);
 		}
 		public static Builder Default() => new ();
 	}

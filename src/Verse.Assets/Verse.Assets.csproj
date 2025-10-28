@@ -7,8 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Verse.Core\Verse.Core.csproj" />
-      <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj" />
+        <ProjectReference Include="..\Verse.Core\Verse.Core.csproj"/>
     </ItemGroup>
 
 </Project>

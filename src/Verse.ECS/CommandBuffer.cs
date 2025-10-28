@@ -3,133 +3,74 @@ namespace Verse.ECS;
 public class CommandBuffer
 {
 	private World _world;
-	internal readonly Queue<DeferredOp> _operations;
+	internal readonly Queue<ICommand> _operations;
 	public CommandBuffer(World world)
 	{
 		_world = world;
-		_operations = new Queue<DeferredOp>();
+		_operations = new Queue<ICommand>();
+	}
+	
+	public void AddCommand(ICommand command)
+	{
+		_operations.Enqueue(command);
 	}
 
-	public void Add<T>(EcsID entity) where T : struct
+	public void Set<T>(EcsID entity, T component) where T : struct
 	{
-		ref readonly var cmp = ref _world.GetComponent<T>();
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.SetComponent,
-			Entity = entity,
-			Data = null!,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
-	}
-
-	public ref T Set<T>(EcsID entity, T component) where T : struct
-	{
-		ref readonly var cmp = ref _world.GetComponent<T>();
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.SetComponent,
-			Entity = entity,
-			Data = component,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
-
-		return ref Unsafe.Unbox<T>(cmd.Data);
-	}
-
-	public object? Set(EcsID entity, EcsID id, object? rawCmp, int size)
-	{
-		var cmp = new SlimComponent(id, size);
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.SetComponent,
-			Entity = entity,
-			Data = rawCmp,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
-		return rawCmp;
+		AddCommand(new SetComponentCommand<T>(entity, component));
 	}
 
 	public void SetChanged<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref _world.GetComponent<T>();
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.SetChanged,
-			Entity = entity,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
-	}
-
-	public void SetChanged(EcsID entity, EcsID id)
-	{
-		var cmp = new SlimComponent(id, -1);
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.SetChanged,
-			Entity = entity,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
+		AddCommand(new SetChangedCommand<T>(entity));
 	}
 
 	public void Unset<T>(EcsID entity) where T : struct
 	{
-		ref readonly var cmp = ref _world.GetComponent<T>();
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.UnsetComponent,
-			Entity = entity,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
-	}
-
-	public void Unset(EcsID entity, EcsID id)
-	{
-		var cmp = new SlimComponent(id, 0);
-
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.UnsetComponent,
-			Entity = entity,
-			SlimComponent = cmp
-		};
-
-		_operations.Enqueue(cmd);
+		AddCommand(new UnsetComponentCommand<T>(entity));
 	}
 
 	public void Delete(EcsID entity)
 	{
-		var cmd = new DeferredOp {
-			Op = DeferredOpTypes.DestroyEntity,
-			Entity = entity
-		};
-
-		_operations.Enqueue(cmd);
+		AddCommand(new DeleteEntityCommand { Entity = entity });
 	}
 
+	public void InsertResource<T>(T resource) 
+	{
+		AddCommand(new InsertResourceCommand<T>(resource));
+	}
 }
 
-public struct DeferredOp
+public interface ICommand
 {
-	public DeferredOpTypes Op;
+	public void Apply(World world);
+}
+
+public record struct SetComponentCommand<T>(EcsID Entity, T Component) : ICommand
+	where T : struct
+{
+	public void Apply(World world) => world.Entity(Entity).Set(Component);
+}
+
+public record struct DeleteEntityCommand : ICommand
+{
 	public EcsID Entity;
-	public SlimComponent SlimComponent;
-	public object? Data;
+	public void Apply(World world) => world.Delete(Entity);
 }
 
-public enum DeferredOpTypes : byte
+public record struct UnsetComponentCommand<T>(EcsID Entity) : ICommand
+	where T : struct
 {
-	DestroyEntity,
-	SetComponent,
-	UnsetComponent,
-	SetChanged
+	public void Apply(World world) => world.Entity(Entity).Unset<T>();
+}
+
+public record struct SetChangedCommand<T>(EcsID Entity) : ICommand
+	where T : struct
+{
+	public void Apply(World world) => world.SetChanged<T>(Entity);
+}
+
+public record struct InsertResourceCommand<T>(T Resource) : ICommand
+{
+	public void Apply(World world) => world.InsertResource(Resource);
 }
