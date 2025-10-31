@@ -1,10 +1,10 @@
 - [x] Currently queries are set to always access terms as a write. We need the ability to express read only terms.
 - [ ] Add State
-- [ ] Flesh out Res behavior
-  - [ ] Add FromWorld trait and use it for resource init
+- [x] Flesh out Res behavior
+  - [x] Add FromWorld trait and use it for resource init
     - If we do this, add a secondary option for a : new() generic type?
-  - [ ] Should we even allow null resources?
-  - [ ] Fix codegen calling everything resmut and bypassing value checks
+  - [x] Should we even allow null resources?
+  - [x] Fix codegen calling everything resmut and bypassing value checks
 - [ ] Rewrite ECS Generator to not be so messy
 - [ ] Convert Schedule labels to actually using labels
 - [x] SubApps

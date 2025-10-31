@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using System.Xml.Serialization;
+using CommunityToolkit.HighPerformance;
 using Serilog;
 using Verse.Core;
 using Verse.ECS;
@@ -45,7 +46,7 @@ public class AssetServer
 				//         .resource_mut::<Messages<AssetEvent<A>>>()
 				//         .write(AssetEvent::LoadedWithDependencies { id: id.typed() });
 			};
-			
+
 			// TODO proxy events to world
 			infos.OnDependencyFailed[typeof(T)] = (world, id, path, error) => {
 				//     world
@@ -65,7 +66,7 @@ public class AssetServer
 	public void RegisterLoader<TLoader, TAsset, TLoaderSettings>(TLoader loader)
 		where TLoader : IAssetLoader<TAsset, TLoaderSettings>
 		where TAsset : IAsset
-		where TLoaderSettings : ISettings
+		where TLoaderSettings : ISettings, new()
 	{
 		loadersLock.EnterWriteLock();
 		try {
@@ -98,6 +99,12 @@ public class AssetServer
 		where TAsset : IAsset
 	{
 		return LoadWithMetaTransform<TAsset, AssetPath>(path, null, null);
+	}
+
+	public Handle<TAsset> Load<TAsset>(string path)
+		where TAsset : IAsset
+	{
+		return LoadWithMetaTransform<TAsset, AssetPath>(AssetPath.ParseUri(path), null, null);
 	}
 
 
@@ -153,15 +160,16 @@ public class AssetServer
 
 		IAssetMeta meta;
 		IUntypedAssetLoader loader;
-		Stream stream;
+		Stream data;
 		try {
-			(meta, loader, stream) = await GetMetaLoaderAndReader(path, inputHandleType);
+			(meta, loader, data) = await GetMetaLoaderAndReader(path, inputHandleType);
 		}
 		catch (AssetLoadException e) {
 			Log.Error(e, "Failed loading asset at {path}", path);
 			SendAssetEvent(InternalAssetEvent.Failed(handle?.Id() ?? default, e, path));
 			throw;
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			Log.Error(e, "Failed loading asset at {path}", path);
 			var ale = new AssetLoadException("Failed loading asset", e);
 			SendAssetEvent(InternalAssetEvent.Failed(handle?.Id() ?? default, ale, path));
@@ -223,7 +231,7 @@ public class AssetServer
 		}
 		UntypedLoadedAsset asset;
 		try {
-			asset = await LoadWithMetaLoaderAndReader(basePath, meta, loader, stream, true, false);
+			asset = await LoadWithMetaLoaderAndReader(basePath, meta, loader, data, true, false);
 		}
 		catch (AssetLoadException e) {
 			SendAssetEvent(InternalAssetEvent.Failed(baseAssetId, e, path));
@@ -255,11 +263,11 @@ public class AssetServer
 	}
 
 	private async Task<UntypedLoadedAsset> LoadWithMetaLoaderAndReader(
-		AssetPath path, IAssetMeta meta, IUntypedAssetLoader loader, Stream stream, bool loadDeps, bool populateHashes)
+		AssetPath path, IAssetMeta meta, IUntypedAssetLoader loader, Stream data, bool loadDeps, bool populateHashes)
 	{
 		var ctx = new LoadContext(this, path, loadDeps, populateHashes);
 		try {
-			return await loader.Load(stream, meta, ctx);
+			return await loader.Load(data, meta, ctx);
 		}
 		catch (Exception e) {
 			throw new AssetLoadException("Failed to load asset", e);
@@ -273,10 +281,9 @@ public class AssetServer
 		var source = sources.GetSource(path.Source);
 		try {
 			var stream = await source.Read(path.Path);
-
 			try {
-				var metaStream = await source.ReadMeta(path.Path);
-				var rawMeta = minimalMetaSerializer.Deserialize(metaStream);
+				var data = await source.ReadMeta(path.Path);
+				var rawMeta = minimalMetaSerializer.Deserialize(data);
 				if (rawMeta is not AssetMetaMinimal minimalMeta) {
 					throw new AssetLoadException("Failed to deserialize minimal asset meta");
 				}
@@ -291,7 +298,7 @@ public class AssetServer
 				}
 				IAssetMeta meta;
 				try {
-					meta = loader.DeserializeMeta(metaStream);
+					meta = loader.DeserializeMeta(data);
 				}
 				catch (Exception e) {
 					throw new AssetLoadException("failed to deserialize asset meta", e);

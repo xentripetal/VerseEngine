@@ -9,8 +9,3 @@ public interface ISchedulable
 	/// <returns>Scheduled app</returns>
 	public App Schedule(App app);
 }
-
-public interface IStaticSchedulable
-{
-	public static abstract App Schedule(App app);
-}

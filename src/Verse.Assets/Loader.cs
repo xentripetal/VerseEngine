@@ -1,3 +1,5 @@
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 using Serilog;
 using Verse.ECS;
 
@@ -13,7 +15,7 @@ public class AssetLoaders
 	public void Register<TLoader, TAsset, TSettings>(TLoader loader)
 		where TLoader : IAssetLoader<TAsset, TSettings>
 		where TAsset : IAsset
-		where TSettings : ISettings
+		where TSettings : ISettings, new()
 	{
 		Loaders.Add(loader);
 		if (!AssetTypeToLoader.TryGetValue(typeof(TAsset), out var existing)) {
@@ -21,7 +23,7 @@ public class AssetLoaders
 			AssetTypeToLoader[typeof(TAsset)] = existing;
 		}
 		existing.Add(Loaders.Count - 1);
-		
+
 		foreach (var ext in loader.Extensions) {
 			if (!ExtensionToLoader.TryGetValue(ext, out var list)) {
 				list = new List<int>();
@@ -32,7 +34,7 @@ public class AssetLoaders
 			}
 			list.Add(Loaders.Count - 1);
 		}
-		
+
 		LoaderNameToIndex[typeof(TLoader).Name] = Loaders.Count - 1;
 	}
 
@@ -55,7 +57,7 @@ public class AssetLoaders
 		loader = null;
 		return false;
 	}
-	
+
 	public bool TryFind(string? typeName, Type? assetType, string? extension, AssetPath? path, out IUntypedAssetLoader loader)
 	{
 		if (typeName != null) {
@@ -115,12 +117,38 @@ public interface IUntypedAssetLoader
 	public IAssetMeta DefaultMeta();
 }
 
-public interface IAssetLoader<TAsset, in TSettings> : IUntypedAssetLoader
+public interface IAssetLoader<TAsset, TSettings> : IUntypedAssetLoader
 	where TAsset : IAsset
-	where TSettings : ISettings
+	where TSettings : ISettings, new()
 {
 	public Task<TAsset> Load(Stream stream, TSettings settings, LoadContext context);
-	public Type AssetType { get => typeof(TAsset); }
+	Type IUntypedAssetLoader.AssetType => typeof(TAsset);
+	async Task<UntypedLoadedAsset> IUntypedAssetLoader.Load(Stream stream, IAssetMeta assetMeta, LoadContext context)
+	{
+		var settings = assetMeta.LoaderSettings;
+		if (settings is not TSettings tSettings) {
+			throw new InvalidOperationException(
+				$"Asset meta loader settings type {settings.GetType()} does not match expected type {typeof(TSettings)} for loader {GetType()}");
+		}
+		var asset = await Load(stream, tSettings, context);
+		return UntypedLoadedAsset.FromLoaded(context.Finish(asset));
+	}
+
+	static XmlSerializer serializer = new XmlSerializer(typeof(AssetMeta<TSettings, TAsset>));
+	IAssetMeta IUntypedAssetLoader.DeserializeMeta(Stream stream)
+	{
+		return (AssetMeta<TSettings, TAsset>)serializer.Deserialize(stream)! ?? throw new InvalidOperationException();
+	}
+
+	IAssetMeta IUntypedAssetLoader.DefaultMeta()
+	{
+		return new AssetMeta<TSettings, TAsset>(
+			new AssetAction<TSettings>() {
+				Type = AssetActionType.Load,
+				LoaderSettings = new TSettings(),
+			}
+		);
+	}
 }
 
 public class LoadContext
@@ -132,12 +160,22 @@ public class LoadContext
 	public HashSet<UntypedAssetId> Dependencies = new ();
 	public Dictionary<AssetPath, AssetHash> LoaderDependencies = new ();
 	public Dictionary<string, LabeledAsset> LabeledAssets = new ();
-	
-	public LoadContext(AssetServer server, AssetPath path, bool shouldLoadDependencies, bool populateHashes) {
+
+	public LoadContext(AssetServer server, AssetPath path, bool shouldLoadDependencies, bool populateHashes)
+	{
 		Server = server;
 		Path = path;
 		ShoudLoadDependencies = shouldLoadDependencies;
 		PopulateHashes = populateHashes;
+	}
+
+	public LoadedAsset<T> Finish<T>(T value) where T : IAsset
+	{
+		var asset = new LoadedAsset<T>(value);
+		asset.Dependencies = this.Dependencies;
+		asset.LoaderDependencies = this.LoaderDependencies;
+		asset.LabeledAssets = this.LabeledAssets;
+		return asset;
 	}
 }
 

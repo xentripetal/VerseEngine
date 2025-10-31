@@ -216,10 +216,11 @@ public sealed class Archetype : IComparable<Archetype>
 	public ulong Generation { get; }
 	internal ReadOnlySpan<ArchetypeChunk> Chunks => _chunks.AsSpan(0, Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
 	internal int EmptyChunks => _chunks.Length - (Count + CHUNK_SIZE - 1 >> CHUNK_LOG2);
-	
+
 	public override string ToString()
 	{
-		return $"Archetype(Generation: {Generation}, HashId: {HashId}, Count: {Count}, Components: [{string.Join(", ", Components.Select(c => World.Registry.GetComponent(c.Id).Name))}], Tags: [{string.Join(", ", Tags.Select(c => World.Registry.GetComponent(c.Id).Name))}])";
+		return
+			$"Archetype(Generation: {Generation}, HashId: {HashId}, Count: {Count}, Components: [{string.Join(", ", Components.Select(c => World.Registry.GetComponent(c.Id).Name))}], Tags: [{string.Join(", ", Tags.Select(c => World.Registry.GetComponent(c.Id).Name))}])";
 	}
 
 	public int CompareTo(Archetype? other) => HashId.CompareTo(other?.HashId);
@@ -285,7 +286,7 @@ public sealed class Archetype : IComparable<Archetype>
 			var dstIdx = row & CHUNK_THRESHOLD;
 			for (var i = 0; i < Components.Length; ++i) {
 				lastChunk.Columns![i].CopyTo(srcIdx, in chunk.Columns![i], dstIdx);
-				lastChunk.Columns![i].Clear(dstIdx);
+				lastChunk.Columns![i].Clear(srcIdx);
 			}
 
 			ref var rec = ref World.GetRecord(chunk.EntityAt(row).Id);
@@ -295,7 +296,7 @@ public sealed class Archetype : IComparable<Archetype>
 			// delete the last one
 			for (var i = 0; i < Components.Length; ++i) {
 				chunk.Columns![i].Clear(row & CHUNK_THRESHOLD);
-			}	
+			}
 		}
 
 		// lastChunk.EntityAt(_count) = EntityView.Invalid;
@@ -363,7 +364,7 @@ public sealed class Archetype : IComparable<Archetype>
 		Count = 0;
 		_add.Clear();
 		_remove.Clear();
-		TrimChunksIfNeeded();
+		Array.Clear(_chunks, 0, _chunks.Length);
 	}
 
 	private void TrimChunksIfNeeded()

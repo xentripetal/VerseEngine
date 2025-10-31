@@ -108,7 +108,8 @@ internal enum CommandType : uint
 	GetSpaceRemaining,
 	GetFileSize,
 	ReadFile,
-	WriteFile
+	WriteFile,
+	EnumerateDirectory
 }
 
 internal struct GetSpaceRemainingCommand
@@ -134,6 +135,12 @@ internal struct WriteFileCommand
 	public int PathLength;
 	public IntPtr Buffer;
 	public ulong Size;
+}
+
+internal struct EnumerateDirectoryCommand
+{
+	public IntPtr Path; // marshalled!
+	public int PathLength;
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 96)]

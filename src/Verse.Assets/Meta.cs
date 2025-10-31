@@ -4,14 +4,11 @@ namespace Verse.Assets;
 
 public interface ISettings { }
 
-public class AssetMeta<TProcessor, TProcessorSettings, TLoader, TLoaderSettings, TAsset> : IAssetMeta
-	where TProcessor : IAssetProcess<TProcessor, TProcessorSettings, TLoader, TLoaderSettings, TAsset>
-	where TLoader : IAssetLoader<TAsset, TLoaderSettings>
-	where TProcessorSettings : ISettings
-	where TLoaderSettings : ISettings
+public class AssetMeta<TLoaderSettings, TAsset> : IAssetMeta
+	where TLoaderSettings : ISettings, new()
 	where TAsset : IAsset
 {
-	public AssetMeta(AssetAction<TLoaderSettings, TProcessorSettings> asset)
+	public AssetMeta(AssetAction<TLoaderSettings> asset)
 	{
 		Asset = asset;
 		ProcessedInfo = null;
@@ -27,8 +24,9 @@ public class AssetMeta<TProcessor, TProcessorSettings, TLoader, TLoaderSettings,
 	/// <summary>
 	/// How to handle this asset in the asset system.
 	/// </summary>
-	public AssetAction<TLoaderSettings, TProcessorSettings> Asset;
+	public AssetAction<TLoaderSettings> Asset;
 	
+	[XmlIgnore]
 	public ISettings? LoaderSettings {
 		get {
 			if (Asset.Type == AssetActionType.Load) {
@@ -84,14 +82,13 @@ public enum AssetActionType
 /// </summary>
 /// <typeparam name="TLoaderSettings"></typeparam>
 /// <typeparam name="TProcessSettings"></typeparam>
-public struct AssetAction<TLoaderSettings, TProcessSettings>
+public struct AssetAction<TLoaderSettings>
 	where TLoaderSettings : ISettings
-	where TProcessSettings : ISettings
 {
+	
 	public AssetActionType Type;
 	public string Name;
 	public TLoaderSettings LoaderSettings;
-	public TProcessSettings ProcessSettings;
 
 	public AssetActionMinimal Minimal() => new AssetActionMinimal {
 		Type = Type,

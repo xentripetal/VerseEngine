@@ -106,4 +106,14 @@ public partial class World
 		// TODO take the res out of the world for this fn
 		fn(resMut);
 	}
+	public bool HasResource<T>()
+	{
+		var id = Registry.ResourceId<T>();
+		if (id == null)
+			return false;
+		var data = Resources.Get(id.Value);
+		if (data == null)
+			return false;
+		return data.IsPresent;
+	}
 }

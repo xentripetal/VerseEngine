@@ -1,10 +1,12 @@
 using System.Reflection;
 using SDL3;
 using Serilog;
+using Verse.Assets;
 using Verse.Core;
 using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
 using Verse.MoonWorks.Graphics;
+using Verse.MoonWorks.Graphics.Resources;
 using Verse.MoonWorks.Storage;
 
 namespace Verse.MoonWorks;
@@ -18,17 +20,26 @@ public struct MoonWorksPlugin(
 
 	public void Build(App app)
 	{
-		app.AddMessage<SDL.SDL_Event>().
-			AddMessage<CloseWindowRequest>().
+		var sdlApp = new MoonWorksApp(app, appInfo, initFlags);
+		app.AddMessage<SDL.SDL_Event>();
+		var runner = new SDLRunner(sdlApp);
+		app.SetRunner(runner.Run);
+	}
+}
+
+public struct MoonWorksGraphicsPlugin : IPlugin
+{
+	public void Build(App app)
+	{
+		app.AddMessage<CloseWindowRequest>().
+			InitAsset<TestTexture>().
+			InitAssetLoader<ImageLoader, TestTexture, ImageSettings>().
 			InsertResource(new WindowRegistry()).
 			InitResource(new GraphicSettings {
 				AvailableShaderFormats = ShaderFormat.MetalLib | ShaderFormat.MSL | ShaderFormat.SPIRV | ShaderFormat.DXBC | ShaderFormat.DXIL,
 				DebugMode = true
 			}).
 			AddSchedulable(new MoonWorksSystems());
-		var sdlApp = new MoonWorksApp(app, appInfo, initFlags);
-		var runner = new SDLRunner(sdlApp);
-		app.SetRunner(runner.Run);
 	}
 }
 
@@ -93,7 +104,7 @@ public partial class MoonWorksSystems
 	{
 		world.InsertResource(new GraphicsDevice(storage, settings.AvailableShaderFormats, settings.DebugMode));
 	}
-	
+
 	[Schedule(Schedules.First)]
 	public void CreateWindows(Query<Data<WindowComponent>, Added<WindowComponent>> q, in GraphicsDevice graphics, in WindowRegistry registry)
 	{

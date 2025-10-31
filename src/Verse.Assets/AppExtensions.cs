@@ -26,9 +26,10 @@ public static class AppExtensions
 	
 	public static App InitAssetLoader<TLoader, TAsset, TSettings>(this App app) 
 		where TLoader : IAssetLoader<TAsset, TSettings>, IFromWorld<TLoader>
-		where TSettings : ISettings 
+		where TSettings : ISettings, new()
 		where TAsset : IAsset
 	{
+		app.InitAsset<TAsset>();
 		var server = app.World.Resource<AssetServer>();
 		server.RegisterLoader<TLoader, TAsset, TSettings>(TLoader.FromWorld(app.World));
 		return app;
@@ -36,7 +37,7 @@ public static class AppExtensions
 	
 	public static App RegisterAssetLoader<TLoader, TAsset, TSettings>(this App app, TLoader loader) 
 		where TLoader : IAssetLoader<TAsset, TSettings>
-		where TSettings : ISettings 
+		where TSettings : ISettings, new()
 		where TAsset : IAsset
 	{
 		var server = app.World.Resource<AssetServer>();
@@ -47,6 +48,9 @@ public static class AppExtensions
 	public static App InitAsset<T>(this App app)
 		where T : IAsset
 	{
+		if (app.World.HasResource<Assets<T>>()) {
+			return app;
+		}
 		var assets = new Assets<T>();
 		var server = app.World.Resource<AssetServer>();
 		// todo asset processor

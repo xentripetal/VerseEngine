@@ -3,29 +3,36 @@ using Verse.Core;
 using Verse.ECS;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Storage;
+using Verse.Assets;
 
 namespace Verse.MoonWorks;
 
-public class MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags) : BaseSDLApp
+public class MoonWorksApp : BaseSDLApp
 {
 
-	protected App VerseApp = app;
-	protected AppInfo AppInfo = appInfo;
-	protected SDL.SDL_InitFlags InitFlags = initFlags;
+	protected App VerseApp;
+	protected AppInfo AppInfo;
+	protected SDL.SDL_InitFlags InitFlags;
 
 	protected TitleStorage TitleStorage;
 	protected UserStorage UserStorage;
 	protected World World;
+	public MoonWorksApp(App app, AppInfo appInfo, SDL.SDL_InitFlags initFlags)
+	{
+		VerseApp = app;
+		AppInfo = appInfo;
+		SDL.SDL_Init(InitFlags);
+		Logger.InitSDLLogging();
+		// We need storage before actually running Init so we can set up asset sources
+		TitleStorage = new TitleStorage("Assets");
+		UserStorage = new UserStorage(AppInfo);
+		VerseApp.SetDefaultAssetSource(new TitleStorageAssetSource(TitleStorage));
+	}
 
 	protected override SDL.SDL_AppResult Init()
 	{
-		SDL.SDL_Init(InitFlags);
-		Logger.InitSDLLogging();
 		World = VerseApp.World;
-
 		// Storage is essential for most systems, so we init it here
-		TitleStorage = new TitleStorage();
-		UserStorage = new UserStorage(AppInfo);
 		// Is this safe? I think so? plugins should be Building on main thread so at this point we should be on main thread
 		VerseApp.InsertResource(TitleStorage);
 		VerseApp.InsertResource(UserStorage);

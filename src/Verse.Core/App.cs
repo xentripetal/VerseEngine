@@ -153,6 +153,13 @@ public class App : IDisposable
 		SubApps.Main.InitResource<T>();
 		return this;
 	}
+	
+	public App InitDefaultResource<T>() where T : new()
+	{
+		SubApps.Main.InitResource(new T());
+		return this;
+	}
+	
 	public App InsertResource<T>(T value)
 	{
 		SubApps.Main.InsertResource(value);
@@ -218,10 +225,16 @@ public class App : IDisposable
 		return schedulable.Schedule(this);
 	}
 
-	public App AddSchedulable<T>() where T : IStaticSchedulable
+	public App AddSchedulable<T>() where T : ISchedulable, new()
 	{
-		return T.Schedule(this);
+		return new T().Schedule(this);
 	}
+
+	public App InitScheduleable<T>() where T : ISchedulable, IFromWorld<T>
+	{
+		return T.FromWorld(World).Schedule(this);
+	}
+	
 	public App AddPlugin<T>() where T : IStaticPlugin => AddPlugin(T.CreatePlugin(this));
 	public bool IsPluginAdded(IPlugin plugin)
 	{

@@ -1,16 +1,50 @@
+using OneOf.Types;
+using Serilog;
+using Verse.Assets;
 using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
 using Verse.Core;
+using Verse.MoonWorks.Graphics.Resources;
 
 namespace ProjectVerse;
 
-public class Example
+public class Example 
 {
-	public int Value;
+	public DateTime LastTime;
+	public DateTime ThisTime;
+	public void Update()
+	{
+		LastTime = ThisTime;
+		ThisTime = DateTime.Now;
+	}
+	
+	public TimeSpan DeltaTime => ThisTime - LastTime;
+}
+
+public class MyAssets
+{
+	public Handle<TestTexture> ExampleTexture;
 }
 
 public partial class RunSystems
 {
+	[Schedule(Schedules.Startup)]
+	public void LoadSprite(MyAssets myAssets, AssetServer server)
+	{
+		myAssets.ExampleTexture = server.Load<TestTexture>("example.png");
+	}
+	
+	private bool wasLoaded = false;
+	[Schedule]
+	public void NotifyOnLoaded(MyAssets myAssets, Assets<TestTexture> textures, AssetServer server)
+	{
+		if (!wasLoaded && server.IsLoaded(myAssets.ExampleTexture)) {
+			wasLoaded = true;
+			var texture = textures.Get(myAssets.ExampleTexture);
+			Log.Information(texture.ToString());
+		}
+	}
+	
 	[Schedule]
 	[Before<Sets>(Sets.Act2)]
 	public void Act1(Commands commands, Query<Data<int>, Writes<int>> q)
@@ -25,18 +59,17 @@ public partial class RunSystems
 	}
 
 	[Schedule]
-	public void Act2(ResMut<Example> b)
+	public void Act2(Example b)
 	{
-		b.Value.Value++;
+		b.Update();
 	}
 
 	[Schedule]
 	[After<Sets>(Sets.Act2)]
-	public void Act3(Query<Data<int>, Changed<int>> q, ResMut<Example> b)
+	public void Act3(Query<Data<int>, Changed<int>> q, Example b)
 	{
-		Console.WriteLine(b.Value.Value);
 		foreach (var (entity, data) in q) {
-			Console.WriteLine($"Entity {entity.Ref.Id} - {data.Ref}");
+			Console.WriteLine($"Entity {entity.Ref} has value {data.Ref} at time {b.ThisTime}, delta {b.DeltaTime.TotalMilliseconds} ms");
 		}
 	}
 }

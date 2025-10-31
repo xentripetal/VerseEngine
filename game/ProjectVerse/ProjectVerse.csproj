@@ -22,5 +22,11 @@
         <ProjectReference Include="..\..\src\Generators\Verse.ECS.Generator\Verse.ECS.Generator.csproj" OutputItemType="Analyzer"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="Assets\*.*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
 
 </Project>

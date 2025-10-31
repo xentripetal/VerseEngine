@@ -49,10 +49,24 @@ public class TitleStorage : IDisposable
 	public bool GetFileSize(string path, out ulong size)
 	{
 		if (!SDL.SDL_GetStorageFileSize(Handle, path, out size)) {
-			Logger.LogError($"File at {path} failed to load: {SDL.SDL_GetError()}");
 			return false;
 		}
 
+		return true;
+	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="path">A path relative to the title root.</param>
+	/// 
+	/// <returns>True if the query succeeded, false otherwise.</returns>
+	public bool GetPathInfo(string path, out SDL.SDL_PathInfo info)
+	{
+		if (!SDL.SDL_GetStoragePathInfo(Handle, path, out info)) {
+			Logger.LogError($"Path info query failed for path {path}: " + SDL.SDL_GetError());
+			return false;
+		}
 		return true;
 	}
 
@@ -69,6 +83,34 @@ public class TitleStorage : IDisposable
 				Logger.LogError($"File at {path} failed to load: {SDL.SDL_GetError()}");
 				return false;
 			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	///     Enumerate the contents of a directory within the storage container.
+	/// </summary>
+	/// <param name="path">A path relative to the title root.</param>
+	/// <param name="callback">A function that will be called for each entry. Parameters are (dirname, filename). Return true to continue enumeration, false to stop.</param>
+	/// <returns>True if enumeration completed successfully, false on error.</returns>
+	public unsafe bool EnumerateDirectory(string path, Func<string, string, bool> callback)
+	{
+		// Create a delegate that matches SDL's expected signature
+		SDL.SDL_EnumerateDirectoryCallback sdlCallback = (userdata, dirname, fname) =>
+		{
+			var dirnameStr = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)dirname);
+			var fnameStr = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)fname);
+
+			bool shouldContinue = callback(dirnameStr ?? "", fnameStr ?? "");
+			return shouldContinue
+				? SDL.SDL_EnumerationResult.SDL_ENUM_CONTINUE
+				: SDL.SDL_EnumerationResult.SDL_ENUM_SUCCESS;
+		};
+
+		if (!SDL.SDL_EnumerateStorageDirectory(Handle, path, sdlCallback, IntPtr.Zero)) {
+			Logger.LogError($"Failed to enumerate directory at {path}: {SDL.SDL_GetError()}");
+			return false;
 		}
 
 		return true;
