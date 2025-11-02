@@ -166,7 +166,7 @@ public class SchedulableGenerator : IIncrementalGenerator
 				var constructorParameters = system.IsStatic ? "" :  ClassName + " systems";
 				var constructorBody = system.IsStatic ? "" : "_systems = systems;";
 				var extraProps = system.IsStatic ? "" : $"private {ClassName} _systems;";
-				var extraInit = system.IsStatic ? "" : $"Meta.Access.AddUnfilteredWrite(world.GetComponent<Verse.ECS.Systems.SharedSystemComponent<{ClassName}>>().Id);";
+				var extraInit = system.IsStatic ? "" : $"Meta.Access.AddUnfilteredWrite(world.RegisterResource<{ClassName}>());";
 				var methodCall = system.IsStatic ? $"{ClassName}.{system.Name}" : $"_systems.{system.Name}";
 				var attributes = GenHelpers.GenerateSequence(system.Attributes.Count, "\n", i => $"[{system.Attributes[i]}]");
 

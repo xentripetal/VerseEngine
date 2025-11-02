@@ -148,15 +148,15 @@ public class App : IDisposable
 		SubApps.Main.AddSystems(node);
 		return this;
 	}
-	public App InitResource<T>() where T : IFromWorld<T>
+	public App InitResource<T>() where T : new()
 	{
 		SubApps.Main.InitResource<T>();
 		return this;
 	}
 	
-	public App InitDefaultResource<T>() where T : new()
+	public App InitWorldResource<T>() where T : IFromWorld<T>
 	{
-		SubApps.Main.InitResource(new T());
+		SubApps.Main.InitWorldResource<T>();
 		return this;
 	}
 	

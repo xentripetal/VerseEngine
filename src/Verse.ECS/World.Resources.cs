@@ -12,12 +12,22 @@ public partial class World
 		return Registry.ResourceId<T>();
 	}
 
-	public ComponentId InitResource<T>() where T : IFromWorld<T>
+	public ComponentId InitWorldResource<T>() where T : IFromWorld<T>
 	{
 		var id = RegisterResource<T>();
 		var data = Resources.InitializeResource(id);
 		if (!data.IsPresent) {
 			data.Insert(T.FromWorld(this), ChangeTick());
+		}
+		return id;
+	}
+	
+	public ComponentId InitResource<T>() where T : new()
+	{
+		var id = RegisterResource<T>();
+		var data = Resources.InitializeResource(id);
+		if (!data.IsPresent) {
+			data.Insert(new T(), ChangeTick());
 		}
 		return id;
 	}

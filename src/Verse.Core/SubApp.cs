@@ -128,9 +128,15 @@ public class SubApp : IDisposable
 		return this;
 	}
 	public SubApp AddSystems(IIntoSystemConfigs node) => AddSystems(DefaultSchedule, node);
-	public SubApp InitResource<T>() where T : IFromWorld<T>
+	public SubApp InitResource<T>() where T : new()
 	{
 		World.InitResource<T>();
+		return this;
+	}
+
+	public SubApp InitWorldResource<T>() where T : IFromWorld<T>
+	{
+		World.InitWorldResource<T>();
 		return this;
 	}
 
@@ -139,7 +145,7 @@ public class SubApp : IDisposable
 		World.InitResource<T>(value);
 		return this;
 	}
-	
+
 	public SubApp InsertResource<T>(T value)
 	{
 		World.InsertResource(value);

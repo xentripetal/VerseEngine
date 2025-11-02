@@ -199,7 +199,7 @@ public class ComponentRegistry(World world)
 	{
 		return Interlocked.Increment(ref _index);
 	}
-	public ComponentId RegisterComponent<T>() where T : struct
+	public ComponentId RegisterComponent<T>() 
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
 			return id;
@@ -218,7 +218,7 @@ public class ComponentRegistry(World world)
 		return ref cmp.Slim;
 	}
 
-	public ref readonly SlimComponent GetSlimComponent<T>() where T : struct
+	public ref readonly SlimComponent GetSlimComponent<T>() 
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
 			return ref components[id].Slim;

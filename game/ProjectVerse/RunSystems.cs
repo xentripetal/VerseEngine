@@ -41,7 +41,6 @@ public partial class RunSystems
 		if (!wasLoaded && server.IsLoaded(myAssets.ExampleTexture)) {
 			wasLoaded = true;
 			var texture = textures.Get(myAssets.ExampleTexture);
-			Log.Information(texture.ToString());
 		}
 	}
 	

@@ -18,7 +18,7 @@ public sealed partial class World
 		EventRegistry = new EventRegistry();
 		Archetypes = new ArchetypeRegistry();
 		_comparer = new ComponentComparer();
-		Resources = new Resources();
+		Resources = new Resources(Registry);
 		Root = new Archetype(
 			this,
 			[],

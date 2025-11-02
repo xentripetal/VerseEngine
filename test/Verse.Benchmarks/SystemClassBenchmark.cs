@@ -24,15 +24,15 @@ public partial class SystemClassBenchmarks
 	public void Setup()
 	{
 		_world = new World();
-		_world.SetRes(1);
-		_world.SetRes<long>(2);
+		_world.InsertResource(1);
+		_world.InsertResource<long>(2);
 		_entity = _world.Entity().Set(1);
 		_schedule = new Schedule("name", ExecutorKind.SingleThreaded);
 
 		switch (SystemType)
 		{
 			case "FuncSystem":
-				_schedule.AddSystems(new FuncSystem<Res<int>, ResMut<long>, Query<Data<int>>>(DoSystemLogic));
+				_schedule.AddSystems(FuncSystem.Of<Res<int>, ResMut<long>, Query<Data<int>>>(DoSystemLogic));
 				break;
 			case "ClassSystem":
 				_schedule.AddSystems(new DoSystemLogicSystem(this));

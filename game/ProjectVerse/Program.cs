@@ -15,8 +15,8 @@ app.AddPlugin(new AssetPlugin());
 app.AddPlugin(new MoonWorksGraphicsPlugin());
 app.AddPlugin(new RenderPlugin());
 app.AddSchedulable<RunSystems>();
-app.InitDefaultResource<MyAssets>();
-app.InitDefaultResource<Example>();
+app.InitResource<MyAssets>();
+app.InitResource<Example>();
 app.World.Entity().Set(new WindowComponent(new Window(new WindowCreateInfo("Test", 1080, 720, ScreenMode.Windowed), 0)));
 
 app.Run();

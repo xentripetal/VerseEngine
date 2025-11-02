@@ -71,7 +71,7 @@ internal struct ArchetypeChunk
 		=> ref Unsafe.Add(ref Entities.AsSpan(0, Count)[0], row & Archetype.CHUNK_THRESHOLD);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ref T GetReference<T>(int column) where T : struct
+	public readonly ref T GetReference<T>(int column) 
 	{
 		if (column < 0 || column >= Columns!.Length)
 			return ref Unsafe.NullRef<T>();
@@ -81,7 +81,7 @@ internal struct ArchetypeChunk
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ref T GetReferenceWithSize<T>(int column, out int sizeInBytes) where T : struct
+	public readonly ref T GetReferenceWithSize<T>(int column, out int sizeInBytes) 
 	{
 		if (column < 0 || column >= Columns!.Length) {
 			sizeInBytes = 0;
@@ -105,7 +105,7 @@ internal struct ArchetypeChunk
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly ref T GetReferenceAt<T>(int column, int row) where T : struct
+	public readonly ref T GetReferenceAt<T>(int column, int row) 
 	{
 		ref var reference = ref GetReference<T>(column);
 		if (Unsafe.IsNullRef(ref reference))
@@ -114,7 +114,7 @@ internal struct ArchetypeChunk
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly Span<T> GetSpan<T>(int column) where T : struct
+	public readonly Span<T> GetSpan<T>(int column) 
 	{
 		if (column < 0 || column >= Columns!.Length)
 			return Span<T>.Empty;
@@ -251,7 +251,7 @@ public sealed class Archetype : IComparable<Archetype>
 	internal bool HasIndex(ComponentId id) => _allLookup.ContainsKey(id);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public int GetComponentIndex<T>() where T : struct
+	public int GetComponentIndex<T>() 
 	{
 		ref readonly var c = ref World.Registry.GetSlimComponent<T>();
 		return c.IsTag ? GetComponentIndex(c.Id) : GetAnyIndex(c.Id);

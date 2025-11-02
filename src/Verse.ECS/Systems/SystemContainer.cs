@@ -35,18 +35,3 @@ public abstract class SystemsContainer : IIntoSystemConfigs, IIntoSystemSet
 
 	public IIntoNodeConfigs<ISystem> AmbiguousWithAll() => IntoConfigs().AmbiguousWithAll();
 }
-
-/// <summary>
-/// 
-/// </summary>
-/// <typeparam name="T"></typeparam>
-public struct SharedSystemComponent<T> 
-{
-	public T Container;
-	public static void RegisterWrite(World world, ISystem system)
-	{
-		var c = world.GetComponent<SharedSystemComponent<T>>();
-		// TODO Do we track the slim id or the ecsid?
-		system.Meta.Access.AddUnfilteredWrite(c.Id);
-	}
-}

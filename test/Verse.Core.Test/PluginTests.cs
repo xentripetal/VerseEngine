@@ -55,7 +55,7 @@ public class PluginTests : IDisposable
         var initialResourceExists = false;
         try
         {
-            _app.World.GetRes<PluginTestResource>();
+            _app.World.Resource<PluginTestResource>();
             initialResourceExists = true;
         }
         catch
@@ -70,7 +70,7 @@ public class PluginTests : IDisposable
         initialResourceExists.Should().BeFalse();
         var resource = _app.World.GetResource<PluginTestResource>();
         resource.Should().NotBeNull();
-        resource.Value.Name.Should().Be("Added by plugin");
+        resource.Name.Should().Be("Added by plugin");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class PluginTests : IDisposable
         // Verify resources
         var resource1 = _app.World.GetResource<PluginTestResource>();
         resource1.Should().NotBeNull();
-        resource1.Value.Name.Should().Be("Complex Resource 1");
+        resource1.Name.Should().Be("Complex Resource 1");
 
         var resource2 = _app.World.GetResource<OtherPluginTestResource>();
         resource2.Should().NotBeNull();
@@ -243,7 +243,7 @@ public class AppConfiguringPlugin : IPlugin
 {
     public void Build(App app)
     {
-        app.World.SetRes(new PluginTestResource { Name = "Added by plugin" });
+        app.World.InsertResource(new PluginTestResource { Name = "Added by plugin" });
     }
 }
 
@@ -265,7 +265,7 @@ public class EventAddingPlugin : IPlugin
 
     public void Build(App app)
     {
-        app.AddEvent<PluginTestEvent>();
+        app.AddMessage<PluginTestEvent>();
         EventsAdded = true;
     }
 }
@@ -341,7 +341,7 @@ public class StatefulPlugin : IPlugin
         app.InsertResource(new PluginTestResource { Name = "Stateful Resource" });
         ConfigurationData.Add("Resource initialized");
 
-        app.AddEvent<PluginTestEvent>();
+        app.AddMessage<PluginTestEvent>();
         ConfigurationData.Add("Events registered");
 
         State = "Configured";

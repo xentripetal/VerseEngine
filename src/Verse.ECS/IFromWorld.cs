@@ -1,6 +1,6 @@
 namespace Verse.ECS;
 
-public interface IFromWorld<T> where T : IFromWorld<T>
+public interface IFromWorld<T> where T : IFromWorld<T>, allows ref struct
 {
 	public static abstract T FromWorld(World world);
 }

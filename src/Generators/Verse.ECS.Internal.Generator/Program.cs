@@ -283,7 +283,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
-				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IFromWorld<T{j}>");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : ISystemParam, IFromWorld<T{j}>");
 				var paramArgs = GenerateSequence(i + 1, "\n\t", j => $"private T{j} _p{j} = default;");
 				var paramArgsGen = GenerateSequence(i + 1, "\n\t\t", j => $"_p{j} = T{j}.FromWorld(world);");
 				var paramArgsList = GenerateSequence(i + 1, ", ", j => $"_p{j}");
@@ -310,7 +310,7 @@ public sealed partial class FuncSystem<{genericsArgs}>(Action<{genericsArgs}> fn
 			sb.AppendLine("public partial class FuncSystem {");
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
-				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : class, ISystemParam, IFromWorld<T{j}>");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : ISystemParam, IFromWorld<T{j}>");
 				sb.AppendLine($@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null, Attribute[] attributes = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set, attributes);");
 			}
 			sb.AppendLine("}");

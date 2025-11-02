@@ -7,33 +7,48 @@ namespace Verse.ECS;
 /// </summary>
 public class ResourceData
 {
-	public ResourceData()
+	public ResourceData(Array data)
 	{
-		data = null;
+		this.data = data;
 		addedTick = new BoxedTick();
 		changedTick = new BoxedTick();
 	}
 
-	// Bevy uses an array, similar to our table storage. Might want to go that route.
-	private object? data;
+	private bool hasValue;
+	private Array data;
 	private BoxedTick addedTick;
 	private BoxedTick changedTick;
 
-	public bool IsPresent => data != null;
+	public bool IsPresent => hasValue;
 
-	public T Get<T>() 
-	{
-		if (data is T typedData) {
-			return typedData;
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public T Get<T>() {
+		if (!IsPresent) {
+			throw new InvalidOperationException("Resource is not present");
 		}
-		throw new InvalidCastException($"Resource is of type {data?.GetType().FullName ?? "null"}, cannot cast to {typeof(T).FullName}");
+		var span = new Span<T>(Unsafe.As<T[]>(data), 0, 1);
+		return MemoryMarshal.GetReference(span);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public ref T GetRef<T>()
+	{
+		if (!IsPresent) {
+			throw new InvalidOperationException("Resource is not present");
+		}
+		var span = new Span<T>(Unsafe.As<T[]>(data), 0, 1);
+		return ref MemoryMarshal.GetReference(span);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Span<T> GetSpan<T>()
+	{
+		if (!IsPresent) {
+			throw new InvalidOperationException("Resource is not present");
+		}
+		return new Span<T>(Unsafe.As<T[]>(data), 0, 1);
 	}
 	
-	public object? Get()
-	{
-		return data;
-	}
-
 	public ResourceTicks? GetTicks()
 	{
 		if (IsPresent) {
@@ -56,18 +71,20 @@ public class ResourceData
 	/// </summary>
 	/// <param name="value">Value to insert. Must be valid for the underlying type for the resource</param>
 	/// <param name="changeTick">Current change tick of the world</param>
-	public void Insert(object? value, Tick changeTick)
+	public void Insert<T>(T value, Tick changeTick)
 	{
 		if (!IsPresent) {
 			addedTick = changeTick;
 		}
-		data = value;
+		hasValue = true;
+		GetRef<T>() = value;
 		changedTick = changeTick;
 	}
 
-	public void InsertWithTicks(object? value, ResourceTicks ticks)
+	public void InsertWithTicks<T>(T value, ResourceTicks ticks)
 	{
-		data = value;
+		hasValue = true;
+		GetRef<T>() = value;
 		addedTick = ticks.Added;
 		changedTick = ticks.Changed;
 	}
@@ -75,12 +92,13 @@ public class ResourceData
 	/// <summary>
 	/// Removes a value from the resource, if present
 	/// </summary>
-	public (object, ResourceTicks)? Remove()
+	public (object?, ResourceTicks)? Remove()
 	{
-		var existing = data;
 		if (IsPresent) {
-			data = null;
-			return (existing!, new ResourceTicks(addedTick, changedTick));
+			var value = data.GetValue(0);
+			Array.Clear(data, 0 , 1);
+			hasValue = false;
+			return (value, new ResourceTicks(addedTick, changedTick));
 		}
 		return null;
 	}
@@ -90,10 +108,12 @@ public class ResourceData
 		if (!IsPresent) {
 			return;
 		}
-		if (data is IDisposable disposable) {
+		var value = data.GetValue(0);
+		if (value is IDisposable disposable) {
 			disposable.Dispose();
 		}
-		data = null;
+		Array.Clear(data, 0 , 1);
+		hasValue = false;
 	}
 
 	public void CheckChangeTicks(Tick check)
@@ -108,7 +128,12 @@ public class ResourceData
 /// </summary>
 public class Resources : IEnumerable<KeyValuePair<ComponentId, ResourceData>>
 {
+	public Resources(ComponentRegistry registry)
+	{
+		this.registry = registry;
+	}
 	private SparseSet<ComponentId, ResourceData> resources = new ();
+	private ComponentRegistry registry;
 
 	public int Length => resources.Length;
 
@@ -129,7 +154,7 @@ public class Resources : IEnumerable<KeyValuePair<ComponentId, ResourceData>>
 	public ResourceData InitializeResource(ComponentId id)
 	{
 		// Bevy does some complicated set up here. we just do boxing as an object. Think it should have the same side affects?
-		return resources.GetOrInsert(id, () => new ResourceData());
+		return resources.GetOrInsert(id, () => new ResourceData(registry.GetArray(id, 1) ?? throw new InvalidOperationException($"Failed to create resource array for resource {id}")));
 	}
 
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

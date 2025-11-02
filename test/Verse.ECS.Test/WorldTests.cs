@@ -27,6 +27,40 @@ public class WorldTests : IDisposable
 	}
 
 	[Fact]
+	public void World_StructResource()
+	{
+		_world.InitResource<int>();
+		var res = _world.Resource<int>();
+		res.Should().Be(0);
+		_world.InsertResource(1);
+		var res2 = _world.Resource<int>();
+		res2.Should().Be(1);
+	}
+	
+	public class ExampleResource
+	{
+		public string Data { get; set; } = string.Empty;
+	}
+	
+	[Fact]
+	public void World_ResourceLifecycle()
+	{
+		var value = _world.GetResource<ExampleResource>();
+		value.Should().BeNull();
+		_world.InitResource<ExampleResource>();
+		value = _world.Resource<ExampleResource>();
+		value.Data.Should().Be(string.Empty);
+		
+		_world.InsertResource(new ExampleResource() { Data = "Hello" });
+		value = _world.Resource<ExampleResource>();
+		value.Data.Should().Be("Hello");
+
+		_world.RemoveResource<ExampleResource>();
+		value = _world.GetResource<ExampleResource>();
+		value.Should().BeNull();
+	}
+
+	[Fact]
 	public void Entity_Create_ShouldCreateNewEntity()
 	{
 		// Act
@@ -233,35 +267,16 @@ public class WorldTests : IDisposable
 	[Fact]
 	public void Resource_SetAndGet_ShouldWorkCorrectly()
 	{
-		// Arrange
 		var resource = new TestResource { Data = "Global Resource" };
-
-		// Act
-		_world.SetRes(resource);
-		var retrieved = _world.GetRes<TestResource>();
-
-		// Assert
-		retrieved.Should().NotBeNull();
-		retrieved.Value.Data.Should().Be("Global Resource");
-	}
-
-	[Fact]
-	public void Resource_InitRes_ShouldInitializeResource()
-	{
-		// Act
-		_world.InitRes<TestResource>();
-
-		// Assert
-		// InitRes should create the resource container, allowing MustGetRes to succeed
-		var action = () => _world.MustGetRes<TestResource>();
-		action.Should().NotThrow();
+		_world.InsertResource(resource);
+		_world.Resource<TestResource>();
 	}
 
 	[Fact]
 	public void Resource_MustGetRes_WithoutResource_ShouldThrow()
 	{
 		// Act & Assert
-		var action = () => _world.MustGetRes<TestResource>();
+		var action = () => _world.Resource<TestResource>();
 		action.Should().Throw<Exception>();
 	}
 
@@ -269,15 +284,15 @@ public class WorldTests : IDisposable
 	public void Resource_GetResMut_ShouldAllowMutation()
 	{
 		// Arrange
-		_world.SetRes(new TestResource { Data = "Initial" });
+		_world.InsertResource(new TestResource { Data = "Initial" });
 
 		// Act
-		var resMut = _world.GetResMut<TestResource>();
-		resMut.Value.Data = "Modified";
+		var res = _world.Resource<TestResource>();
+		res.Data = "Modified";
 
 		// Assert
-		var retrieved = _world.GetRes<TestResource>();
-		retrieved.Value.Data.Should().Be("Modified");
+		var retrieved = _world.Resource<TestResource>();
+		retrieved.Data.Should().Be("Modified");
 	}
 
 	[Fact]
