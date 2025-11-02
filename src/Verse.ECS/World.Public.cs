@@ -206,7 +206,7 @@ public sealed partial class World
 	}
 
 	/// <inheritdoc cref="SetChanged" />
-	public void SetChanged<T>(EcsID entity) where T : struct
+	public void SetChanged<T>(EcsID entity) 
 	{
 		SetChanged(entity, GetComponent<T>().Id);
 	}
@@ -267,7 +267,7 @@ public sealed partial class World
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
-	public void Add<T>(EcsID entity) where T : struct
+	public void Add<T>(EcsID entity) 
 	{
 		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size <= 0, "this is not a tag");
@@ -286,7 +286,7 @@ public sealed partial class World
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
 	/// <param name="component"></param>
-	public void Set<T>(EcsID entity, T component) where T : struct
+	public void Set<T>(EcsID entity, T component) 
 	{
 		ref readonly var cmp = ref GetComponent<T>();
 		EcsAssert.Panic(cmp.Size > 0, "this is not a component");
@@ -300,7 +300,7 @@ public sealed partial class World
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
-	public void Unset<T>(EcsID entity) where T : struct
+	public void Unset<T>(EcsID entity) 
 		=> Unset(entity, GetComponent<T>().Id);
 
 	/// <summary>
@@ -319,7 +319,7 @@ public sealed partial class World
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
 	/// <returns></returns>
-	public bool Has<T>(EcsID entity) where T : struct
+	public bool Has<T>(EcsID entity) 
 		=> Has(entity, GetComponent<T>().Id);
 
 	/// <summary>
@@ -337,7 +337,7 @@ public sealed partial class World
 	/// <typeparam name="T"></typeparam>
 	/// <param name="entity"></param>
 	/// <returns></returns>
-	public ref T Get<T>(EcsID entity) where T : struct
+	public ref T Get<T>(EcsID entity) 
 	{
 		ref readonly var cmp = ref GetComponent<T>();
 		return ref GetUntrusted<T>(entity, cmp.Id, cmp.Size);
@@ -462,7 +462,7 @@ public sealed partial class World
 		}
 	}
 
-	public void AllowAmbiguousComponent<T>() where T : struct
+	public void AllowAmbiguousComponent<T>() 
 	{
 		var schedules = Resource<ScheduleContainer>();
 		schedules.AllowAmbiguousComponent(Registry.RegisterComponent<T>());

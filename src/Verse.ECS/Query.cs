@@ -14,19 +14,19 @@ public sealed class QueryBuilder
 
 	public World World { get; }
 
-	public QueryBuilder With<T>(TermAccess access = TermAccess.Read) where T : struct => With(World.GetComponent<T>().Id, access);
+	public QueryBuilder With<T>(TermAccess access = TermAccess.Read) => With(World.GetComponent<T>().Id, access);
 
 
 	public QueryBuilder With(ComponentId id, TermAccess access = TermAccess.Read)
 		=> Term(new WithTerm(id, access));
 
-	public QueryBuilder Without<T>() where T : struct
+	public QueryBuilder Without<T>() 
 		=> Without(World.GetComponent<T>().Id);
 
 	public QueryBuilder Without(ComponentId id)
 		=> Term(new WithoutTerm(id));
 
-	public QueryBuilder Optional<T>() where T : struct
+	public QueryBuilder Optional<T>() 
 	{
 		ref readonly var cmp = ref World.GetComponent<T>();
 		EcsAssert.Panic(cmp.Size > 0, "You can't access Tag as Component");
@@ -185,7 +185,7 @@ public ref struct QueryIterator
 	public readonly int GetColumnIndexOf<T>() where T : struct => _indices.IndexOf(_archetypeIterator.Current.GetComponentIndex<T>());
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal readonly DataRow<T> GetColumn<T>(int index) where T : struct
+	internal readonly DataRow<T> GetColumn<T>(int index) 
 	{
 #if NET9_0_OR_GREATER
 		Unsafe.SkipInit(out DataRow<T> data);

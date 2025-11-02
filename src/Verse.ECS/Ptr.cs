@@ -6,7 +6,7 @@ public class PtrMutationData
 }
 
 [SkipLocalsInit]
-public ref struct Ptr<T> where T : struct
+public ref struct Ptr<T> 
 {
 	internal ref T Value;
 	internal PtrMutationData? MutationData;
@@ -50,7 +50,7 @@ public readonly ref struct PtrRO<T> where T : struct
 }
 
 [SkipLocalsInit]
-internal ref struct DataRow<T> where T : struct
+internal ref struct DataRow<T> 
 {
 	public Ptr<T> Value;
 	public nint Size;

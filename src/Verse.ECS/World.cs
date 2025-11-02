@@ -58,7 +58,7 @@ public sealed partial class World : IDisposable
 		return ref record;
 	}
 
-	public ref readonly SlimComponent GetComponent<T>() where T : struct
+	public ref readonly SlimComponent GetComponent<T>() 
 	{
 		// todo - is ref here actually faster?
 		return ref Registry.GetSlimComponent<T>();
@@ -184,14 +184,8 @@ public sealed partial class World : IDisposable
 		return archetype;
 	}
 
-	internal ref T GetUntrusted<T>(EcsID entity, EcsID id, int size) where T : struct
+	internal ref T GetUntrusted<T>(EcsID entity, EcsID id, int size) 
 	{
-		/**
-		if (IsDeferred && !Has(entity, id)) {
-			Unsafe.SkipInit<T>(out var val);
-			return ref Unsafe.Unbox<T>(SetDeferred(entity, id, val, size)!);
-		}**/
-
 		ref var record = ref GetRecord(entity);
 		var column = record.Archetype.GetComponentIndex(id);
 		return ref record.Chunk.GetReferenceAt<T>(column, record.Row);

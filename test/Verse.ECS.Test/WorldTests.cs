@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Verse.ECS.Systems;
 
 namespace Verse.ECS.Test;
 
@@ -36,12 +37,13 @@ public class WorldTests : IDisposable
 		var res2 = _world.Resource<int>();
 		res2.Should().Be(1);
 	}
-	
+
 	public class ExampleResource
 	{
 		public string Data { get; set; } = string.Empty;
 	}
-	
+
+
 	[Fact]
 	public void World_ResourceLifecycle()
 	{
@@ -50,7 +52,7 @@ public class WorldTests : IDisposable
 		_world.InitResource<ExampleResource>();
 		value = _world.Resource<ExampleResource>();
 		value.Data.Should().Be(string.Empty);
-		
+
 		_world.InsertResource(new ExampleResource() { Data = "Hello" });
 		value = _world.Resource<ExampleResource>();
 		value.Data.Should().Be("Hello");
@@ -59,6 +61,47 @@ public class WorldTests : IDisposable
 		value = _world.GetResource<ExampleResource>();
 		value.Should().BeNull();
 	}
+
+
+	public class ClassComponent
+	{
+		public int Value;
+		public ClassComponent Nested;
+	}
+
+	[Fact]
+	public void World_ClassComponentLifecycle()
+	{
+		var entity = _world.Entity();
+		var comp = new ClassComponent() { Value = 10, Nested = new ClassComponent() { Value = 20 } };
+		_world.Set(entity, comp);
+
+		var retrieved = _world.Get<ClassComponent>(entity.Id);
+		retrieved.Value.Should().Be(10);
+		retrieved.Nested.Value.Should().Be(20);
+
+		retrieved.Value = 30;
+		_world.Set(entity.Id, retrieved);
+	}
+
+	[Fact]
+	public void World_ClassComponentIter()
+	{
+		var comp = new ClassComponent() { Value = 10, Nested = new ClassComponent() { Value = 20 } };
+		_world.Set(_world.Entity(), comp);
+		_world.Set(_world.Entity(), comp);
+		_world.Set(_world.Entity(), new ClassComponent() { Value = 5 });
+
+		var fn = (Query<Data<ClassComponent>> q) => {
+			foreach (var (entity, item) in q) {
+				item.Value.Value.Should().BeGreaterThan(0);
+			}
+		};
+		var sys = FuncSystem.Of(fn);
+		sys.Initialize(_world);
+		_world.RunSystem(sys);
+	}
+	
 
 	[Fact]
 	public void Entity_Create_ShouldCreateNewEntity()

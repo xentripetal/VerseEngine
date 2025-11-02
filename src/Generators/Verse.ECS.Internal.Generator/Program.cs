@@ -71,7 +71,6 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var generics = GenerateSequence(i + 1, ", ", j => $"T{j}");
-				var whereGenerics = GenerateSequence(i + 1, " ", j => $"where T{j} : struct");
 				var ptrList = GenerateSequence(i + 1, "\n", j => $"private DataRow<T{j}> _current{j};");
 				var ptrSet = GenerateSequence(i + 1, "\n", j => $"_current{j} = _iterator.GetColumn<T{j}>({j});");
 				var ptrAdvance = GenerateSequence(i + 1, "\n", j => $"_current{j}.Next();");
@@ -83,7 +82,6 @@ public sealed class MyGenerator : IIncrementalGenerator
 				sb.AppendLine($@"
 					[SkipLocalsInit]
 					public unsafe ref struct Data<{generics}> : IData<Data<{generics}>>
-						{whereGenerics}
 					{{
 						private QueryIterator _iterator;
 						private int _index, _count;
@@ -167,13 +165,11 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var generics = GenerateSequence(i + 1, ", ", j => $"T{j}");
-				var whereGenerics = GenerateSequence(i + 1, " ", j => $"where T{j} : struct");
 				var objsArgs = GenerateSequence(i + 1, ", ", j => $"GetComponent<T{j}>()");
 
 				sb.AppendLine($@"
 					/// <inheritdoc cref=""World.Archetype(Span{{EcsID}})""/>
 					public Archetype Archetype<{generics}>()
-						{whereGenerics}
 						=> Archetype({objsArgs});
 				");
 			}
