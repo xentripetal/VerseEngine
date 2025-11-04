@@ -22,6 +22,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 			//postContext.AddSource("Verse.ECS.Systems.Interfaces.g.cs", CodeFormatter.Format(GenerateSystemsInterfaces()));
 			postContext.AddSource("Verse.ECS.Systems.DataAndFilter.g.cs", CodeFormatter.Format(CreateDataAndFilterStructs()));
 			postContext.AddSource("Verse.ECS.Systems.FuncSystem.g.cs", CodeFormatter.Format(GenerateFuncSystems()));
+			postContext.AddSource("Verse.ECS.ParamSet.g.cs", CodeFormatter.Format(GenerateParamSets()));
 
 			postContext.AddSource("Verse.ECS.Archetypes.g.cs", CodeFormatter.Format(GenerateArchetypes()));
 			postContext.AddSource("Verse.ECS.QueryIteratorEach.g.cs", CodeFormatter.Format(GenerateQueryIteratorEach()));
@@ -77,7 +78,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 				var fieldSign = GenerateSequence(i + 1, ", ", j => $"out Ptr<T{j}> ptr{j}");
 				var fieldAssignments = GenerateSequence(i + 1, "\n", j => $"ptr{j} = _current{j}.Value;");
 				var queryBuilderCalls = GenerateSequence(i + 1, "\n", j => $"builder.With<T{j}>();");
-				var mutators = GenerateSequence(i+1, "\n", j => $"if (_current{j}.Value.Mutated) _iterator.MarkChanged({j}, _index);");
+				var mutators = GenerateSequence(i + 1, "\n", j => $"if (_current{j}.Value.Mutated) _iterator.MarkChanged({j}, _index);");
 
 				sb.AppendLine($@"
 					[SkipLocalsInit]
@@ -273,7 +274,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 
 			sb.AppendLine("using Verse.ECS;");
 			sb.AppendLine("using Verse.ECS.Systems;");
-			
+
 			sb.AppendLine("namespace Verse.ECS.Systems;");
 
 
@@ -307,9 +308,66 @@ public sealed partial class FuncSystem<{genericsArgs}>(Action<{genericsArgs}> fn
 			for (var i = 0; i < MAX_GENERICS; ++i) {
 				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
 				var genericsArgsWhere = GenerateSequence(i + 1, "\n", j => $"where T{j} : ISystemParam, IFromWorld<T{j}>");
-				sb.AppendLine($@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null, Attribute[] attributes = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set, attributes);");
+				sb.AppendLine(
+					$@"public static FuncSystem<{genericsArgs}> Of<{genericsArgs}>(Action<{genericsArgs}> fn, string? name = null, ISystemSet set = null, Attribute[] attributes = null) {genericsArgsWhere} => new FuncSystem<{genericsArgs}>(fn, name, set, attributes);");
 			}
 			sb.AppendLine("}");
+
+			return sb.ToString();
+		}
+
+		static string GenerateParamSets()
+		{
+			var sb = new StringBuilder();
+
+			sb.AppendLine("#pragma warning disable 1591");
+			sb.AppendLine("#nullable enable");
+			sb.AppendLine();
+			sb.AppendLine("using Verse.ECS.Systems;");
+			sb.AppendLine();
+			sb.AppendLine("namespace Verse.ECS;");
+			sb.AppendLine();
+
+			for (var i = 0; i < MAX_GENERICS; ++i) {
+				var genericsArgs = GenerateSequence(i + 1, ", ", j => $"T{j}");
+				var genericsArgsWhere = GenerateSequence(i + 1, "\n\t", j => $"where T{j} : ISystemParam, IFromWorld<T{j}>");
+				var properties = GenerateSequence(i + 1, "\n\t", j => $"public T{j} P{j} = T{j}.FromWorld(world);");
+				var initCalls = GenerateSequence(i + 1, "\n\t\t", j => $"P{j}.Init(system, world);");
+				var validateCalls = GenerateSequence(i + 1, "\n\t\t", j => $"P{j}.ValidateParam(meta, world, thisRun);");
+				var deconstructParams = GenerateSequence(i + 1, ", ", j => $"out T{j} p{j}");
+				var deconstructAssignments = GenerateSequence(i + 1, "\n\t\t", j => $"p{j} = P{j};");
+
+				sb.AppendLine($@"
+/// <summary>
+/// A static holder for system parameters
+/// </summary>
+/// <param name=""world"">World for this param set</param>
+public class ParamSet<{genericsArgs}>(World world) : ISystemParam, IFromWorld<ParamSet<{genericsArgs}>>
+	{genericsArgsWhere}
+{{
+	{properties}
+
+	public void Init(ISystem system, World world)
+	{{
+		{initCalls}
+	}}
+
+	public void ValidateParam(SystemMeta meta, World world, Tick thisRun)
+	{{
+		{validateCalls}
+	}}
+
+	public static ParamSet<{genericsArgs}> FromWorld(World world) => new ParamSet<{genericsArgs}>(world);
+
+	public void Deconstruct({deconstructParams})
+	{{
+		{deconstructAssignments}
+	}}
+}}
+");
+			}
+
+			sb.AppendLine("#pragma warning restore 1591");
 
 			return sb.ToString();
 		}

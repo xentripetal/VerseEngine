@@ -178,6 +178,22 @@ public sealed class DenseAssetStorage<T> where T : IAsset
 		return entry.Value;
 	}
 
+	public bool TryGet(AssetIndex index, out T? value)
+	{
+		var actualIndex = (int)index.Index;
+		if (actualIndex >= storage.Count) {
+			value = default;
+			return false;
+		}
+		var entry = storage[actualIndex];
+		if (entry.Generation != index.Generation) {
+			value = default;
+			return false;
+		}
+		value = entry.Value;
+		return true;
+	}
+
 	internal void Flush()
 	{
 		var newLength = allocator.nextIndex;
@@ -438,8 +454,17 @@ public partial class Assets<T>
 		if (id.Id.IsGuid) {
 			return HashStorage.TryGetValue(id.Id.AsGuid, out var value) ? value : default(T?);
 		} else {
-			return DenseStorage.Get(id.Id.AsIndex);
+			return DenseStorage.TryGet(id.Id.AsIndex, out var value) ? value : default(T?);
 		}
+	}
+
+	public bool TryGet<TInto>(TInto intoId, out T? value) where TInto : IIntoAssetId<T>
+	{
+		var id = intoId.IntoAssetId();
+		if (id.Id.IsGuid) {
+			return HashStorage.TryGetValue(id.Id.AsGuid, out value);
+		}
+		return DenseStorage.TryGet(id.Id.AsIndex, out value);
 	}
 
 

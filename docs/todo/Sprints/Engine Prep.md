@@ -6,18 +6,18 @@ kanban-plugin: board
 
 ## Backlog
 
-- [ ] SparseSet / Resource Storage
-- [ ] Simple 2D render graph
-- [ ] Asset disposal
 - [ ] Fix render world graphics seperation
 
 
 ## In Progress
 
+- [ ] Simple 2D render graph
 
 
 ## Done
 
+- [ ] SparseSet / Resource Storage
+- [ ] Asset disposal
 
 
 

@@ -71,7 +71,7 @@ public class AssetServerTests
 		}
 	}
 	
-	public void WaitForNoAssets(Res<Assets<TextAsset>> assets, EventWriter<AppExit> exitWriter)
+	public void WaitForNoAssets(Res<Assets<TextAsset>> assets, MessageWriter<AppExit> exitWriter)
 	{
 		if (assets.Value.Length == 0) {
 			Log.Information("No more assets loaded, exiting");
@@ -87,7 +87,7 @@ public class AssetServerTests
 		res.Value.Asset = handle;
 	}
 
-	public void ExitOnLoaded(Res<AssetServer> server, Res<Assets<TextAsset>> assets, Res<ExampleResource> res, EventWriter<AppExit> exitWriter)
+	public void ExitOnLoaded(Res<AssetServer> server, Res<Assets<TextAsset>> assets, Res<ExampleResource> res, MessageWriter<AppExit> exitWriter)
 	{
 		if (server.Value.IsLoaded(res.Value.Asset)) {
 			var asset = assets.Value.Get(res.Value.Asset);

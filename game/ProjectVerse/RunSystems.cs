@@ -5,6 +5,7 @@ using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
 using Verse.Core;
 using Verse.MoonWorks.Graphics.Resources;
+using Verse.Render.Assets;
 
 namespace ProjectVerse;
 
@@ -23,7 +24,7 @@ public class Example
 
 public class MyAssets
 {
-	public Handle<TestTexture> ExampleTexture;
+	public Handle<Image> ExampleTexture;
 }
 
 public partial class RunSystems
@@ -31,12 +32,12 @@ public partial class RunSystems
 	[Schedule(Schedules.Startup)]
 	public void LoadSprite(MyAssets myAssets, AssetServer server)
 	{
-		myAssets.ExampleTexture = server.Load<TestTexture>("example.png");
+		myAssets.ExampleTexture = server.Load<Image>("example.png");
 	}
 	
 	private bool wasLoaded = false;
 	[Schedule]
-	public void NotifyOnLoaded(MyAssets myAssets, Assets<TestTexture> textures, AssetServer server)
+	public void NotifyOnLoaded(MyAssets myAssets, Assets<Image> textures, AssetServer server)
 	{
 		if (!wasLoaded && server.IsLoaded(myAssets.ExampleTexture)) {
 			wasLoaded = true;

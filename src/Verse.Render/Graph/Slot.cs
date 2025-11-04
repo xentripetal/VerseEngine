@@ -31,11 +31,11 @@ public record struct SlotValue : IIntoSlotValue
 	/// <summary>Render buffer for vertex data, see <see cref="Verse.MoonWorks.Graphics.Resources.Buffer"/></summary>
 	public static SlotValue OfBuffer(Buffer buffer) => new (SlotType.Buffer, buffer);
 
-	/// <summary>SDL3 texture/surface. See <see cref="Verse.MoonWorks.Graphics.Resources.Texture"/></summary>
+	/// <summary>SDL3 texture/surface. See <see cref="Texture"/></summary>
 	public static SlotValue OfTexture(Texture texture) => new (SlotType.Texture, texture);
 
 
-	/// <summary>Sampler defines how a pipeline will sample from a <see cref="Verse.MoonWorks.Graphics.Resources.Texture"/></summary>
+	/// <summary>Sampler defines how a pipeline will sample from a <see cref="Texture"/></summary>
 	public static SlotValue OfSampler(Sampler sampler) => new (SlotType.Sampler, sampler);
 
 	/// <summary>Entity/component data</summary>

@@ -1,13 +1,11 @@
-﻿using Verse.Assets;
-using Verse.ECS;
-using SDL = Verse.MoonWorks.Graphics.SDL_GPU;
+﻿using SDL = Verse.MoonWorks.Graphics.SDL_GPU;
 
 namespace Verse.MoonWorks.Graphics.Resources;
 
 /// <summary>
 ///     A multi-dimensional data container that can be efficiently used by the GPU.
 /// </summary>
-public class Texture : SDLGPUResource, IAsset<Texture>
+public class Texture : SDLGPUResource
 {
 
 	private Texture(GraphicsDevice device) : base(device) { }
@@ -345,6 +343,4 @@ public class Texture : SDLGPUResource, IAsset<Texture>
 		height,
 		layerCountOrDepth
 	);
-	public void VisitDependencies(Action<UntypedAssetId> visit) { }
-	public Texture GetValue() => this;
 }

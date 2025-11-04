@@ -32,8 +32,8 @@ public struct MoonWorksGraphicsPlugin : IPlugin
 	public void Build(App app)
 	{
 		app.AddMessage<CloseWindowRequest>().
-			InitAsset<TestTexture>().
-			InitAssetLoader<ImageLoader, TestTexture, ImageSettings>().
+			InitAsset<Image>().
+			InitAssetLoader<ImageLoader, Image, ImageSettings>().
 			InsertResource(new WindowRegistry()).
 			InitResource(new GraphicSettings {
 				AvailableShaderFormats = ShaderFormat.MetalLib | ShaderFormat.MSL | ShaderFormat.SPIRV | ShaderFormat.DXBC | ShaderFormat.DXIL,
@@ -120,7 +120,7 @@ public partial class MoonWorksSystems
 	}
 
 	[Schedule(Schedules.Last)]
-	public void CloseWindows(World world, EventReader<CloseWindowRequest> closes, ref readonly GraphicsDevice graphics, WindowRegistry registry)
+	public void CloseWindows(World world, MessageReader<CloseWindowRequest> closes, ref readonly GraphicsDevice graphics, WindowRegistry registry)
 	{
 		foreach (var close in closes) {
 			var entityId = registry.EntityFromWindow(close.WindowId);

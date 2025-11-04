@@ -34,103 +34,9 @@ public class EventRegistry()
 	}
 }
 
-public sealed class Messages<T> : IEventParam, IFromWorld<Messages<T>>
-	where T : notnull
-{
-	private readonly List<T> eventsLastFrame = new List<T>();
-	private readonly List<T> eventsThisFrame = new List<T>();
-
-	internal Messages()
-	{
-		// todo refactor to use a offset id in cursors
-		Writer = new EventWriter<T>(eventsThisFrame);
-		Reader = new EventReader<T>(eventsLastFrame);
-	}
-
-	public EventWriter<T> Writer { get; }
-	public EventReader<T> Reader { get; }
 
 
-	public void Clear()
-	{
-		eventsLastFrame.Clear();
-		eventsLastFrame.AddRange(eventsThisFrame);
-		eventsThisFrame.Clear();
-	}
 
-	public static Messages<T> FromWorld(World world)
-	{
-		var existing = world.GetResource<Messages<T>>();
-		if (existing != null)
-			return existing;
-		var messages = new Messages<T>();
-		world.InsertResource(messages);
-		world.EventRegistry.Register(messages);
-		return messages;
-	}
-}
-
-public sealed class EventWriter<T> : ISystemParam, IFromWorld<EventWriter<T>>
-	where T : notnull
-{
-	private readonly List<T> _events;
-
-	internal EventWriter(List<T> events)
-	{
-		_events = events;
-	}
-
-	public bool IsEmpty
-		=> _events.Count == 0;
-
-	public void Clear()
-		=> _events.Clear();
-
-	public void Enqueue(T ev)
-		=> _events.Add(ev);
-
-	public void Init(ISystem system, World world)
-	{
-		system.Meta.Access.AddUnfilteredWrite(world.ResourceId<Messages<T>>()!.Value);
-	}
-	public void ValidateParam(SystemMeta meta, World world, Tick thisRun) { }
-
-	public static EventWriter<T> FromWorld(World world)
-	{
-		return world.Resource<Messages<T>>().Writer;
-	}
-}
-
-public sealed class EventReader<T> : ISystemParam, IFromWorld<EventReader<T>>
-	where T : notnull
-{
-	private readonly List<T> _events;
-
-	internal EventReader(List<T> queue)
-	{
-		_events = queue;
-	}
-
-	public bool IsEmpty
-		=> _events.Count == 0;
-
-	public IEnumerable<T> Values => _events;
-
-	public void Clear()
-		=> _events.Clear();
-
-	public List<T>.Enumerator GetEnumerator()
-		=> _events.GetEnumerator();
-	public void Init(ISystem system, World world)
-	{
-		system.Meta.Access.AddUnfilteredRead(world.ResourceId<Messages<T>>()!.Value);
-	}
-	public void ValidateParam(SystemMeta meta, World world, Tick thisRun) { }
-	public static EventReader<T> FromWorld(World world)
-	{
-		return world.Resource<Messages<T>>().Reader;
-	}
-}
 
 partial class World : ISystemParam, IFromWorld<World>
 {
@@ -323,7 +229,7 @@ public sealed class Commands : ISystemParam, IFromWorld<Commands>
 		return new EntityCommand(_buffer, ent.Id);
 	}
 	
-	public void InsetResource<T>(T resource) where T : class
+	public void InsertResource<T>(T resource) where T : class
 	{
 		_buffer.InsertResource(resource);
 	}
