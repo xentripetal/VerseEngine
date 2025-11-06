@@ -1,0 +1,43 @@
+# Build artifacts - not relevant for understanding code
+**/bin/**
+**/obj/**
+**/.vs/**
+**/.vscode/**
+
+# Generated code - read source instead
+**/Generated/**
+**/*.g.cs
+
+# Third-party documentation - not our code
+docs/libs/sdl3/**
+
+# Package directories
+**/packages/**
+**/node_modules/**
+
+# Binary files
+**/*.dll
+**/*.exe
+**/*.pdb
+**/*.so
+**/*.dylib
+
+# IDE files
+**/.idea/**
+**/.rider/**
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test results
+**/TestResults/**
+**/*.trx
+
+# Logs
+**/*.log
+
+# Temporary files
+**/*.tmp
+**/*.temp
+**/*.cache
