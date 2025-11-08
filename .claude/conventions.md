@@ -4,9 +4,10 @@
 
 ### General C# Standards
 - **PascalCase** for types, methods, properties, public fields
-- **camelCase** for local variables, parameters
-- **_camelCase** for private fields (leading underscore)
+- **camelCase** for local variables, parameters, private fields
 - **SCREAMING_CASE** for constants (when appropriate)
+
+**Note**: Do NOT use leading underscores for private fields. Use plain camelCase instead.
 
 ### ECS-Specific Naming
 
@@ -24,9 +25,9 @@ public struct GameConfig { }          // Can be class or struct
 
 **Systems**:
 ```csharp
-public partial class RunSystems { }           // System groups
-public class PhysicsSystem : ClassSystem { }  // Individual systems
-public void UpdateVelocity(Query<...> query) // Method-based systems
+public partial class RunSystems { }              // System groups (must be partial)
+public void UpdateVelocity(Query<...> query) { } // Method-based systems with [Schedule]
+// Or use FuncSystem.Of for lambda-based systems
 ```
 
 **System Sets**:
@@ -93,7 +94,7 @@ public struct Position
 }
 ```
 
-**Use classes** when needed:
+**Use classes** when needed (but be aware of performance implications):
 ```csharp
 public class MeshComponent  // Complex data or needs inheritance
 {
@@ -101,6 +102,14 @@ public class MeshComponent  // Complex data or needs inheritance
     public List<uint> Indices { get; }
 }
 ```
+
+**⚠️ Performance Warning**: Class components have performance implications:
+- Indirection overhead (pointer chasing)
+- Poor cache locality
+- GC pressure from allocations
+- Slower iteration compared to struct components
+
+Use class components only when absolutely necessary (inheritance, very large data, reference semantics required). For performance-critical components, **always prefer structs**.
 
 **Tag components** (zero-size):
 ```csharp
@@ -117,28 +126,32 @@ public struct GameConfig { }        // Simple configuration
 
 ### Systems
 
-**Class-based systems**:
+**Recommended: Method-based systems with [Schedule] attribute**:
 ```csharp
-public class PhysicsSystem : ClassSystem
+public partial class GameSystems  // Must be partial for code generation
 {
-    public override void Run(World world, ISystemRunner runner)
+    [Schedule]  // Required for code generation
+    public void UpdatePositions(
+        Query<Data<Position>, Writes<Velocity>> query,
+        Res<Time> time)
     {
-        // System logic
+        foreach (var (entity, data) in query)
+        {
+            data.Mut.X += data.Ref.X * time.Value.DeltaTime;
+        }
     }
 }
 ```
 
-**Method-based systems** (with code generation):
+**Alternative: FuncSystem.Of for lambdas**:
 ```csharp
-public static void UpdatePositions(
-    Query<Position, Velocity> query,
-    Res<Time> time)
-{
-    foreach (var (position, velocity) in query.Iter())
+// Register lambda as system
+app.AddSystems(Schedules.Update,
+    FuncSystem.Of<Res<Time>, ResMut<GameState>>((time, state) =>
     {
-        position.X += velocity.X * time.DeltaTime;
-    }
-}
+        state.Value.ElapsedTime += time.Value.DeltaTime;
+    })
+);
 ```
 
 ## Code Generation
@@ -149,17 +162,26 @@ Use partial classes for generated systems:
 ```csharp
 public partial class GameSystems  // Partial allows code generation
 {
-    [System]
-    public static void MySystem(Query<Transform> query)
+    [Schedule]  // Required - triggers code generation
+    public void MySystem(Query<Data<Transform>> query)
     {
         // Implementation
+    }
+
+    [Schedule(Schedules.Startup)]  // Can specify schedule
+    public void Initialize(Commands commands)
+    {
+        // Initialization logic
     }
 }
 ```
 
 ### Generator Attributes
 
-- `[System]` - Marks methods as systems for generation
+- **`[Schedule]`** - **Required** for code generation to recognize methods as systems
+  - Triggers Verse.ECS.Generator to create wrapper code
+  - Can optionally specify schedule: `[Schedule(Schedules.Startup)]`
+  - Default is `Schedules.Update` if not specified
 - Generator creates wrapper code for dependency injection
 
 ## ECS Patterns

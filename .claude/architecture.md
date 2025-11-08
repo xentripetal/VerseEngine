@@ -94,13 +94,59 @@ public enum TermAccess { Read, Write }
 - OptionalTerm(id)        // May have component (null if absent)
 ```
 
-**Query Building**:
+**Query Building** (Manual):
 ```csharp
 var query = new QueryBuilder(world)
     .With<Transform>(TermAccess.Write)
     .With<Velocity>(TermAccess.Read)
     .Without<Disabled>()
     .Build();
+```
+
+**Typed Queries** (Recommended):
+
+Typed queries provide compile-time safety and better performance through generic type parameters:
+
+```csharp
+// Basic data access (read-only by default)
+Query<Data<Transform, Velocity>> query
+
+// With filtering
+Query<Data<Transform>, Without<Dead>> query
+
+// Write access
+Query<Data<Transform>, Writes<Velocity>> query
+
+// Change detection
+Query<Data<int>, Changed<int>> query
+
+// Added detection
+Query<Data<Transform>, Added<Transform>> query
+
+// Multiple filters
+Query<Data<Transform, Velocity>, Without<Disabled>, Without<Dead>> query
+```
+
+**Common Query Type Parameters**:
+- `Data<T1, T2, ...>` - Access component data (read-only)
+- `Writes<T>` - Mark component for write access
+- `Without<T>` - Exclude entities with component
+- `With<T>` - Include entities with component (no data access)
+- `Changed<T>` - Only entities where component changed
+- `Added<T>` - Only entities where component was added
+- `Optional<T>` - Component may or may not exist (check with Unsafe.IsNullRef)
+
+**Usage Example**:
+```csharp
+public void UpdateVelocity(Query<Data<Transform, Velocity>, Without<Dead>> query)
+{
+    foreach (var (entity, data) in query)
+    {
+        // data.Ref gives read access to Transform and Velocity
+        var transform = data.Ref.Item1;
+        var velocity = data.Ref.Item2;
+    }
+}
 ```
 
 **Query Matching**:

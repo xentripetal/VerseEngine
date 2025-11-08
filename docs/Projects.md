@@ -18,7 +18,7 @@ VerseEngine is organized into multiple .NET projects, each with a specific purpo
 - Execution framework and scheduling
 - SubApp support for parallel worlds
 
-**Dependencies**: None (foundation layer)
+**Dependencies**: Verse.ECS
 
 **Key Types**:
 - `App` - Main application class
@@ -39,7 +39,7 @@ VerseEngine is organized into multiple .NET projects, each with a specific purpo
 - Change detection and tick tracking
 - Multiple storage backends (Table, SparseSet)
 
-**Dependencies**: Verse.Core
+**Dependencies**: None (standalone)
 
 **Key Directories**:
 - `Scheduling/` - System scheduling and execution
@@ -277,15 +277,15 @@ Performance benchmarks for critical paths
 
 ```
                                     ┌─────────────┐
-                                    │ Verse.Core  │
-                                    │  (Foundation)│
+                                    │ Verse.ECS   │
+                                    │ (Standalone)│
                                     └──────┬──────┘
                                            │
                     ┌──────────────────────┼──────────────────────┐
                     │                      │                      │
             ┌───────▼────────┐    ┌───────▼────────┐    ┌───────▼────────┐
-            │  Verse.ECS     │    │ Verse.Tracing  │    │ Verse.Editor   │
-            │  (ECS Core)    │    │                │    │                │
+            │  Verse.Core    │    │ Verse.Tracing  │    │ Verse.Editor   │
+            │  (Foundation)  │    │                │    │                │
             └───────┬────────┘    └────────────────┘    └────────────────┘
                     │
         ┌───────────┼───────────┬─────────────┐
@@ -325,8 +325,9 @@ When creating a new project:
 
 ### Dependency Rules
 
-- **Core layer** (Verse.Core, Verse.Math): No dependencies
-- **ECS layer** (Verse.ECS): Depends only on Core
+- **ECS layer** (Verse.ECS): No dependencies (standalone)
+- **Core layer** (Verse.Core): Depends on Verse.ECS
+- **Math layer** (Verse.Math): No dependencies
 - **Feature modules**: Depend on Core and/or ECS
 - **High-level modules**: Can depend on multiple lower layers
 - **Test projects**: Can depend on any module
