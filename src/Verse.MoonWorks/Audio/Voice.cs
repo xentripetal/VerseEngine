@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Verse.MoonWorks.lib.FAudio.csharp;
 using EasingFunction = System.Func<float, float>;
 
 namespace Verse.MoonWorks.Audio;

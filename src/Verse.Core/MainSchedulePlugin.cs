@@ -5,7 +5,7 @@ using Verse.ECS.Systems;
 
 namespace Verse.Core;
 
-public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlugin
+public struct MainSchedulePlugin(ExecutorKind executorKind) : IPlugin
 {
 	public void Build(App app)
 	{
@@ -42,7 +42,7 @@ public class MainSchedulePlugin(ExecutorKind executorKind) : IPlugin, IStaticPlu
 
 	}
 
-	protected void InitSchedules(App app, IEnumerable<string> schedules)
+	void InitSchedules(App app, IEnumerable<string> schedules)
 	{
 		foreach (var scheduleLabel in schedules) {
 			var schedule = new Schedule(scheduleLabel, executorKind);

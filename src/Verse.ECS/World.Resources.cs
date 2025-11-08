@@ -21,7 +21,7 @@ public partial class World
 		}
 		return id;
 	}
-	
+
 	public ComponentId InitResource<T>() where T : new()
 	{
 		var id = RegisterResource<T>();
@@ -46,9 +46,9 @@ public partial class World
 		if (!data.IsPresent) {
 			data.Insert(value, ChangeTick());
 		}
-		return id;	
+		return id;
 	}
-	
+
 	public void InsertResource<T>(T resource)
 	{
 		var id = RegisterResource<T>();
@@ -84,11 +84,26 @@ public partial class World
 
 	public T Resource<T>()
 	{
-		var res = GetResource<T>();
-		EcsAssert.Panic(res != null, $"resource of type {typeof(T)} not found in world");
-		return res!;
+		return !TryGetResource<T>(out var res) ? throw new InvalidOperationException($"resource of type {typeof(T)} not found in world") : res!;
 	}
 
+	public bool TryGetResource<T>(out T resource)
+	{
+		var id = Registry.ResourceId<T>();
+		if (id == null) {
+			resource = default!;
+			return false;
+		}
+		var data = Resources.Get(id.Value);
+		if (data == null || !data.IsPresent) {
+			resource = default!;
+			return false;
+		}
+		resource = data.Get<T>();
+		return true;
+	}
+
+	[Obsolete("Use TryGetResource instead")]
 	public T? GetResource<T>()
 	{
 		var id = Registry.ResourceId<T>();
@@ -99,8 +114,8 @@ public partial class World
 			return default;
 		return data.Get<T>();
 	}
-	
-	public T GetResourceOrDefault<T>() where T : new() 
+
+	public T GetResourceOrDefault<T>() where T : new()
 	{
 		var res = GetResource<T>();
 		if (res == null) {

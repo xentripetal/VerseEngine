@@ -1,4 +1,3 @@
-using FluentResults;
 using Serilog;
 using Verse.Assets;
 using Verse.Core;
@@ -7,33 +6,21 @@ using Verse.ECS.Systems;
 
 namespace Verse.Render;
 
-/// <summary>
-/// Defines where an asset will be used
-/// </summary>
-/// <remarks>
-/// If an asset is set to the `RenderWorld` but not the `MainWorld`, the asset will be
-/// unloaded from the asset server once it's been extracted and prepared in the render world.
-///
-/// Unloading the asset saves on memory, as for most cases it is no longer necessary to keep
-/// it in RAM once it's been uploaded to the GPU's VRAM. However, this means you can no longer
-/// access the asset from the CPU (via the `Assets{T}` resource) once unloaded (without re-loading it).
-///
-/// If you never need access to the asset from the CPU past the first frame it's loaded on,
-/// or only need very infrequent access, then set this to `RenderWorld`. Otherwise, set this to
-/// `RenderWorld | MainWorld`.
-///
-/// If you have an asset that doesn't need to end up in the render world, like an Image
-/// that will be decoded into another Image asset, use `MainWorld` only.
-/// </remarks>
-[Flags]
-public enum RenderAssetUsage
-{
-	MainWorld = 1 << 0,
-	RenderWorld = 1 << 1,
-}
 
 public struct PrepareAssetResult<TRenderAsset>
 {
+	public PrepareAssetResult(TRenderAsset asset)
+	{
+		Asset = asset;
+		RetryNextFrame = false;
+		Exception = null;
+	}
+
+	public PrepareAssetResult(Exception exception, bool retry = false)
+	{
+		Exception = exception;
+		RetryNextFrame = retry;
+	}
 	public TRenderAsset? Asset;
 	public bool RetryNextFrame;
 	public Exception? Exception;
@@ -45,7 +32,7 @@ public interface IRenderAsset<TRenderAsset, TSourceAsset, TParam>
 	where TParam : ISystemParam, IFromWorld<TParam>
 {
 	/// <summary>
-	/// Prepares the asset for the GPU by transforming it into a <see cref="IRenderAsset{TRenderAsset, TSourceAsset}"/>
+	/// Prepares the asset for the GPU by transforming it into a <see cref="IRenderAsset{TRenderAsset, TSourceAsset, TParam}"/>
 	/// </summary>
 	static abstract PrepareAssetResult<TRenderAsset> PrepareAsset(TSourceAsset asset, AssetId<TSourceAsset> assetId, TParam param, TRenderAsset? previousAsset);
 
@@ -79,6 +66,13 @@ public class ExtractedAssets<TRender, TSource, TParam>
 	where TSource : IAsset
 	where TParam : ISystemParam, IFromWorld<TParam>
 {
+	public ExtractedAssets()
+	{
+		Extracted = [];
+		Removed = [];
+		Modified = [];
+		Added = [];
+	}
 	public ExtractedAssets(
 		List<(AssetId<TSource>, TSource)> extracted, HashSet<AssetId<TSource>> removed, HashSet<AssetId<TSource>> modified, HashSet<AssetId<TSource>> added)
 	{
@@ -122,8 +116,6 @@ public class RenderAssets<TRender, TSource, TParam>
 /// <summary>
 /// All assets that should be prepared next frame.
 /// </summary>
-/// <typeparam name="TRender"></typeparam>
-/// <typeparam name="TSource"></typeparam>
 public class PrepareNextFrameAssets<TRender, TSource, TParam>
 	where TRender : IRenderAsset<TRender, TSource, TParam>
 	where TSource : IAsset
@@ -137,12 +129,11 @@ public class PrepareNextFrameAssets<TRender, TSource, TParam>
 /// </summary>
 public class AssetExtractionSets : StaticSystemSet { }
 
-public struct RenderAssetPlugin<TRender, TSource, TParam>
+public struct RenderAssetPlugin<TRender, TSource, TParam> : IPlugin
 	where TRender : IRenderAsset<TRender, TSource, TParam>
 	where TSource : IAsset
 	where TParam : ISystemParam, IFromWorld<TParam>
 {
-
 	public void Build(App app)
 	{
 		var render = app.GetSubApp(RenderApp.Name);
@@ -164,15 +155,13 @@ public partial class RenderAssetSystems<TRender, TSource, TParam>
 	/// <summary>
 	/// This system extracts all created or modified assets of the corresponding type into the render world
 	/// </summary>
-	/// <param name="commands"></param>
-	/// <param name="mainWorld"></param>
 	[Schedule(RenderSchedules.Extract)]
-	public static void ExtractRenderAsset(Commands commands, MainWorld mainWorld)
+	public static void ExtractRenderAsset(Commands commands, MainWorld mainWorld, Local<int> offset)
 	{
-		var assets = mainWorld.world.GetResource<Assets<TSource>>();
-		var assetMessages = mainWorld.world.GetResource<Messages<AssetEvent<TSource>>>();
-		// TODO support offset
-		var events = assetMessages.ReaderFrom(0);
+		var assets = mainWorld.world.Resource<Assets<TSource>>();
+		var assetMessages = mainWorld.world.Resource<Messages<AssetEvent<TSource>>>();
+		// TODO Make sure this strategy for offsets actually works
+		var events = assetMessages.CreateReaderFrom(offset.Value);
 
 		var needsExtracting = new HashSet<AssetId<TSource>>();
 		var removed = new HashSet<AssetId<TSource>>();
@@ -220,6 +209,8 @@ public partial class RenderAssetSystems<TRender, TSource, TParam>
 		}
 		var extracted = new ExtractedAssets<TRender, TSource, TParam>(extractedAssets, removed, modified, added);
 		commands.InsertResource(extracted);
+		
+		offset.Value = events.CurrentOffset;
 	}
 
 	[Schedule(RenderSchedules.Render)]
@@ -241,6 +232,25 @@ public partial class RenderAssetSystems<TRender, TSource, TParam>
 			var res = TRender.PrepareAsset(extractedAsset, id, param, previousAsset);
 			if (res.Asset != null) {
 				renderAssets.Assets[id] = res.Asset!;
+			} else if (res.RetryNextFrame) {
+				prepareNextFrame.Assets.Add((id, extractedAsset));
+			} else {
+				Log.Error(res.Exception, "{AssetType} asset preparation failed for asset ID {AssetId}", typeof(TRender), id);
+			}
+		}
+
+		foreach (var removed in assets.Removed) {
+			TRender.UnloadAsset(removed, param);
+		}
+		assets.Removed.Clear();
+
+		foreach (var (id, extractedAsset) in assets.Extracted) {
+			// We remove previous to ensure that if we are updating the asset, then any users will not see the old asset
+			// after a new asset is extracted. Even if the new asset is not yet ready, or we are out of bytes
+			renderAssets.Assets.Remove(id, out var previousAsset);
+			var res = TRender.PrepareAsset(extractedAsset, id, param, previousAsset);
+			if (res.Asset != null) {
+				renderAssets.Assets[id] = res.Asset;
 			} else if (res.RetryNextFrame) {
 				prepareNextFrame.Assets.Add((id, extractedAsset));
 			} else {

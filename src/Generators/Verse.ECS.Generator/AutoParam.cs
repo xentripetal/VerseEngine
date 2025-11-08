@@ -49,7 +49,14 @@ public struct AutoParam
 		// has IFromWorld and ISystemParam
 		bool hasISystemParam = false;
 		bool hasFromWorld = false;
-		foreach (var iface in type.AllInterfaces) {
+		var interfaces = type.AllInterfaces.ToList();
+		
+		// If its a generic, check constraints. This isn't the perfect solution as it won't allow nested constraints.
+		// TODO see if theres a better way to do this
+		if (type is ITypeParameterSymbol symbol) {
+			interfaces = symbol.ConstraintTypes.Select(x => (INamedTypeSymbol)x).ToList();
+		}
+		foreach (var iface in interfaces) {
 			if (iface.Name.Equals("ISystemParam")) {
 				hasISystemParam = true;
 			}
@@ -78,11 +85,11 @@ public struct AutoParam
 	}
 
 	public string AccessModifierText => Access switch {
-		AccessModifier.In   => "in ",
-		AccessModifier.Ref  => "ref ",
+		AccessModifier.In          => "in ",
+		AccessModifier.Ref         => "ref ",
 		AccessModifier.RefReadonly => "in ",
-		AccessModifier.Readonly => "", // can't actually happen
-		AccessModifier.None => "",
+		AccessModifier.Readonly    => "", // can't actually happen
+		AccessModifier.None        => "",
 	};
 
 	public TypeInfo SemanticType;
@@ -106,10 +113,10 @@ public struct AutoParam
 	public string GenInitializer()
 	{
 		return Type switch {
-			ParamType.IFromWorld  => $"{TypeToken}.FromWorld(world)",
-			ParamType.Res    => $"Res<{TypeToken}>.FromWorld(world)",
-			ParamType.ResMut => $"ResMut<{TypeToken}>.FromWorld(world)",
-			_                => "default"
+			ParamType.IFromWorld => $"{TypeToken}.FromWorld(world)",
+			ParamType.Res        => $"Res<{TypeToken}>.FromWorld(world)",
+			ParamType.ResMut     => $"ResMut<{TypeToken}>.FromWorld(world)",
+			_                    => "default"
 		};
 	}
 
@@ -118,6 +125,8 @@ public struct AutoParam
 		var modifier = AccessModifierText;
 		if (Type == ParamType.IFromWorld)
 			return modifier + paramName;
+		if (Type == ParamType.ResMut && Access == AccessModifier.Ref)
+			return $"{modifier}{paramName}.MutValue";
 		if (Type == ParamType.ResMut || Type == ParamType.Res)
 			return $"{modifier}{paramName}.Value";
 		return paramName;

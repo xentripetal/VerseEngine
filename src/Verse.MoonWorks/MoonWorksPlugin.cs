@@ -5,6 +5,7 @@ using Verse.Assets;
 using Verse.Core;
 using Verse.ECS;
 using Verse.ECS.Scheduling.Configs;
+using Verse.MoonWorks.Assets;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
 using Verse.MoonWorks.Storage;

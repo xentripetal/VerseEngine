@@ -2,8 +2,8 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Verse.MoonWorks.Graphics.Resources;
+using WellspringCS;
 using Buffer = Verse.MoonWorks.Graphics.Resources.Buffer;
-using Wellspring = Verse.MoonWorks.lib.WellspringCS.Wellspring;
 
 namespace Verse.MoonWorks.Graphics.Font;
 

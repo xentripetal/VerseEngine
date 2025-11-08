@@ -2,7 +2,9 @@ using System.Numerics;
 using Verse.Core;
 using Verse.Math;
 using Verse.MoonWorks;
+using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
+using Verse.Render.Camera;
 using Verse.Transform;
 
 namespace Verse.Render.View;
@@ -39,6 +41,7 @@ public struct ViewTargetTexture
 {
 	public Texture? Texture;
 	public Window? Window;
+	public Color? ClearColor;
 	
 	public ViewTargetTexture(Texture texture) => Texture = texture;
 	public ViewTargetTexture(Window window) => Window = window;

@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using Verse.Assets;
+using Verse.MoonWorks.Assets;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
 
@@ -7,7 +8,7 @@ namespace Verse.Sprite;
 
 public struct Sprite
 {
-	public Handle<Texture> Texture;
+	public Handle<Image> Image;
 	// todo atlas
 	public Color Color;
 	public bool FlipX, FlipY;

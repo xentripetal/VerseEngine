@@ -34,10 +34,6 @@ public class EventRegistry()
 	}
 }
 
-
-
-
-
 partial class World : ISystemParam, IFromWorld<World>
 {
 	public void Init(ISystem system, World world)
@@ -202,10 +198,11 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Single<
 }
 
 public sealed class Local<T> : ISystemParam, IFromWorld<Local<T>>
+	where T : new()
 {
-	private T? _t;
-	public ref T? Value => ref _t;
-	public static implicit operator T?(Local<T> reference)
+	private T _t = new T();
+	public ref T Value => ref _t;
+	public static implicit operator T(Local<T> reference)
 		=> reference.Value;
 
 	public void Init(ISystem system, World world) { }
@@ -228,12 +225,12 @@ public sealed class Commands : ISystemParam, IFromWorld<Commands>
 		var ent = _world.Entity(id);
 		return new EntityCommand(_buffer, ent.Id);
 	}
-	
+
 	public void InsertResource<T>(T resource) where T : class
 	{
 		_buffer.InsertResource(resource);
 	}
-	
+
 	public void Init(ISystem system, World world)
 	{
 		_buffer = system.Buffer;

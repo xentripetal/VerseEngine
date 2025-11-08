@@ -6,6 +6,7 @@ using Verse.Assets;
 using Verse.Core;
 using Verse.MoonWorks;
 using Verse.Render;
+using Verse.Render.TextureAsset;
 
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
@@ -14,6 +15,7 @@ app.AddPlugin(new MoonWorksPlugin(new AppInfo("Xentripetal", "ProjectVerse")));
 app.AddPlugin(new AssetPlugin());
 app.AddPlugin(new MoonWorksGraphicsPlugin());
 app.AddPlugin(new RenderPlugin());
+app.AddPlugin<TexturePlugin>();
 app.AddSchedulable<RunSystems>();
 app.InitResource<MyAssets>();
 app.InitResource<Example>();

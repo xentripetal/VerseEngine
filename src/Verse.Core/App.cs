@@ -63,7 +63,7 @@ public class App : IDisposable
 	}
 
 	public delegate AppExit RunnerHandler(App app);
-	internal SubApps SubApps;
+	public SubApps SubApps;
 	private RunnerHandler _runnerFn;
 
 	private bool firstRun = true;
@@ -235,7 +235,8 @@ public class App : IDisposable
 		return T.FromWorld(World).Schedule(this);
 	}
 	
-	public App AddPlugin<T>() where T : IStaticPlugin => AddPlugin(T.CreatePlugin(this));
+	public App AddPlugin<T>() where T : IPlugin, new() => AddPlugin(new T());
+	public App AddWorldPlugin<T>() where T : IPlugin, IFromWorld<T> => AddPlugin(T.FromWorld(World));
 	public bool IsPluginAdded(IPlugin plugin)
 	{
 		return SubApps.Main.IsPluginAdded(plugin);
@@ -248,7 +249,7 @@ public class App : IDisposable
 
 	public AppExit? ShouldExit()
 	{
-		var reader = World.Resource<Messages<AppExit>>().Reader;
+		var reader = World.Resource<Messages<AppExit>>().CreateReader();
 		if (reader.IsEmpty) {
 			return null;
 		}

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Verse.MoonWorks.Graphics.Resources;
 using Verse.MoonWorks.Storage;
-using Wellspring = Verse.MoonWorks.lib.WellspringCS.Wellspring;
+using WellspringCS;
 
 namespace Verse.MoonWorks.Graphics.Font;
 

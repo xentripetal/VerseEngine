@@ -30,8 +30,8 @@ public class ShaderLabelEnum(Enum value) : LabelEnum(value), IShaderLabel
 /// </remarks>
 public sealed class
 	ViewBinnedRenderPhases<TBinnedPhaseItem, TBinKey, TBatchSetKey> : Dictionary<RetainedViewEntity, BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>>
-	where TBinnedPhaseItem : IBinnedPhaseItem<TBinKey, TBatchSetKey, TBinnedPhaseItem>
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinnedPhaseItem : IBinnedPhaseItem<TBinKey, TBatchSetKey, TBinnedPhaseItem>, allows ref struct
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey
 {
 	/// <summary>
@@ -69,8 +69,8 @@ public sealed class
 /// </para>
 /// </remarks>
 public sealed class BinnedRenderPhase<TBinnedPhaseItem, TBinKey, TBatchSetKey>
-	where TBinnedPhaseItem : IBinnedPhaseItem<TBinKey, TBatchSetKey, TBinnedPhaseItem>
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinnedPhaseItem : IBinnedPhaseItem<TBinKey, TBatchSetKey, TBinnedPhaseItem>, allows ref struct
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey
 {
 	/// <summary>
@@ -563,7 +563,7 @@ public sealed class RenderBin
 public record struct EntityThatChangedBins<TBinKey, TBatchSetKey>(
 	MainEntity MainEntity,
 	CachedBinnedEntity<TBinKey, TBatchSetKey> OldCachedBinnedEntity)
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey { }
 
 /// <summary>
@@ -572,7 +572,7 @@ public record struct EntityThatChangedBins<TBinKey, TBatchSetKey>(
 /// <param name="CachedBinKey">Information that we use to identify a cached entity in a bin</param>
 /// <param name="ChangeTick">Last modified tick of the entity. We use this to detect when the entity needs to be invalidated</param>
 public record struct CachedBinnedEntity<TBinKey, TBatchSetKey>(CachedBinKey<TBinKey, TBatchSetKey>? CachedBinKey, uint ChangeTick)
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey;
 
 /// <summary>
@@ -587,7 +587,7 @@ public record struct CachedBinKey<TBinKey, TBatchSetKey>(
 	TBatchSetKey BatchSetKey,
 	TBinKey BinKey,
 	BinnedRenderPhaseType PhaseType)
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey;
 
 /// <summary>
@@ -764,11 +764,6 @@ public readonly record struct InputUniformIndex(uint Index)
 public interface IPhaseItem
 {
 	/// <summary>
-	/// Whether or not this PhaseItem should be subjected to automatic batching. (Default: true)
-	/// </summary>
-	bool AutomaticBatching => true;
-
-	/// <summary>
 	/// The corresponding entity that will be drawn.
 	/// </summary>
 	/// <remarks>
@@ -785,14 +780,14 @@ public interface IPhaseItem
 	/// <summary>
 	/// Specifies the Draw function used to render the item.
 	/// </summary>
-	int DrawFunction { get; }
+	DrawFunctionId DrawFunction { get; }
 
 	/// <summary>
 	/// The range of instances that the batch covers. After doing a batched draw, batch range
 	/// length phase items will be skipped. This design is to avoid having to restructure the
 	/// render phase unnecessarily.
 	/// </summary>
-	ref Range BatchRange { get; }
+	Range BatchRange { get; set; }
 
 	/// <summary>
 	/// Returns the PhaseItemExtraIndex.
@@ -800,7 +795,7 @@ public interface IPhaseItem
 	/// <remarks>
 	/// If present, this is either a dynamic offset or an indirect parameters index.
 	/// </remarks>
-	PhaseItemExtraIndex ExtraIndex { get; }
+	PhaseItemExtraIndex ExtraIndex { get; set; }
 }
 
 /// <summary>
@@ -851,9 +846,9 @@ public interface IPhaseItemBatchSetKey
 /// </typeparam>
 /// <typeparam name="TOut">The concrete instance of IBinnedPhaseItem to minimize boxing during creation</typeparam>
 public interface IBinnedPhaseItem<in TBinKey, in TBatchSetKey, out TOut> : IPhaseItem
-	where TBinKey : IComparable, IEquatable<TBinKey>
+	where TBinKey : IComparable<TBinKey>, IEquatable<TBinKey>
 	where TBatchSetKey : IPhaseItemBatchSetKey
-	where TOut : IBinnedPhaseItem<TBinKey, TBatchSetKey, TOut>
+	where TOut : IBinnedPhaseItem<TBinKey, TBatchSetKey, TOut>, allows ref struct
 {
 	/// <summary>
 	/// Create a new binned phase item from the key and per-entity data

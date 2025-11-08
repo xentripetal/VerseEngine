@@ -2,7 +2,7 @@ using Verse.Assets;
 using Verse.ECS;
 using Verse.MoonWorks.Graphics;
 
-namespace Verse.Render.Assets;
+namespace Verse.MoonWorks.Assets;
 
 public struct ImageSettings : ISettings { }
 

@@ -3,15 +3,15 @@ using Verse.MoonWorks.Graphics;
 
 namespace Verse.Render.Graph.RenderPhase;
 
-public record struct DrawFunctionId(uint Id);
+public record struct DrawFunctionId(int Id);
 
-public interface IDrawFunction<T> where T : IPhaseItem
+public interface IDrawFunction<T> where T : IPhaseItem, allows ref struct
 {
 	public void Prepare(World world) {}
 	public void Draw(World world, RenderPass pass, EntityView view, ref T item);
 }
 
-public class DrawFunctions<T> where T : IPhaseItem
+public class DrawFunctions<T> where T : IPhaseItem, allows ref struct
 {
 	public List<IDrawFunction<T>> Functions = new();
 	public Dictionary<Type, int> Indices = new();
@@ -58,9 +58,9 @@ public class DrawFunctions<T> where T : IPhaseItem
 		return Indices[typeof(TLookup)];
 	}
 
-	public IDrawFunction<T>? Get(int index)
+	public IDrawFunction<T>? Get(DrawFunctionId index)
 	{
-		if (index >= Functions.Count) return null;
-		return Functions[index];
+		if (index.Id >= Functions.Count) return null;
+		return Functions[index.Id];
 	} 
 }

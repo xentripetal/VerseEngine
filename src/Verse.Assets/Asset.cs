@@ -651,9 +651,12 @@ public partial class Assets<T>
 
 	[Schedule(Schedules.PostUpdate)]
 	[InSet<AssetSystems>(AssetSystems.AssetEventSystems)]
-	public void AssetEvents()
+	public void AssetEvents(MessageWriter<AssetEvent<T>> writer)
 	{
-		// TODO bevy syncs these to Messages<AssetEvents<T>> and ResMut<AssetChanges<T>>
+		// TODO bevy syncs these to ResMut<AssetChanges<T>> for tracking asset change time
+		foreach (var evt in QueuedEvents) {
+			writer.Enqueue(evt);
+		}
 		QueuedEvents.Clear();
 	}
 }

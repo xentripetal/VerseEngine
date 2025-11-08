@@ -36,7 +36,7 @@ public class SchedulableGenerator : IIncrementalGenerator
 	}
 	private static bool FilterCandidateSyntax(SyntaxNode node, CancellationToken cancel)
 	{
-		if (node is not ClassDeclarationSyntax c)
+		if (node is not TypeDeclarationSyntax c)
 			return false;
 
 		// Use SystemContainerGenerator for these types

@@ -3,11 +3,11 @@ using Verse.Assets;
 using Verse.Core;
 using Verse.ECS;
 using Verse.ECS.Scheduling;
-using Verse.ECS.Scheduling.Configs;
 using Verse.ECS.Scheduling.Graph;
 using Verse.ECS.Systems;
 using Verse.MoonWorks;
 using Verse.MoonWorks.Graphics;
+using Verse.Render.Assets;
 using Verse.Render.Graph;
 
 namespace Verse.Render;
@@ -42,14 +42,18 @@ public partial class RenderPlugin : IPlugin
 
 			if (runStartup) {
 				// TODO improve this
-				renderWorld.InsertResource(mainWorld.Resource<GraphicsDevice>());
+				var device = mainWorld.Resource<GraphicsDevice>();
+				renderWorld.InsertResource(device);
+				renderWorld.InsertResource(new ResourceUploader(device));
 				renderWorld.RunSchedule(RenderSchedules.Startup);
 				runStartup = false;
 			}
 
-
+			var uploader = renderWorld.Resource<ResourceUploader>();
 			renderWorld.InsertResource(new MainWorld(mainWorld));
 			renderWorld.RunSchedule(RenderSchedules.Extract);
+			// TODO can we parallelize this?
+			uploader.UploadAndWait();
 			renderWorld.RemoveResource<MainWorld>();
 		});
 
