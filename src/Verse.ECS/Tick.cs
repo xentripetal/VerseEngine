@@ -50,6 +50,10 @@ public struct Ticks
 	public BoxedTick Changed;
 	public Tick ThisRun;
 	public Tick LastRun;
+	
+	public bool IsChanged => Changed.Tick.IsNewerThan(LastRun, ThisRun);
+	
+	public bool IsAdded => Added.Tick.IsNewerThan(LastRun, ThisRun);
 }
 
 

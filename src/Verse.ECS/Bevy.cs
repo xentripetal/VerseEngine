@@ -226,7 +226,7 @@ public sealed class Commands : ISystemParam, IFromWorld<Commands>
 		return new EntityCommand(_buffer, ent.Id);
 	}
 
-	public void InsertResource<T>(T resource) where T : class
+	public void InsertResource<T>(T resource) 
 	{
 		_buffer.InsertResource(resource);
 	}
@@ -251,13 +251,13 @@ public readonly ref struct EntityCommand
 
 	public readonly EcsID ID;
 
-	public EntityCommand Set<T>(T component) where T : struct
+	public EntityCommand Set<T>(T component) 
 	{
 		buffer.Set(ID, component);
 		return this;
 	}
 
-	public EntityCommand Unset<T>() where T : struct
+	public EntityCommand Unset<T>() 
 	{
 		buffer.Unset<T>(ID);
 		return this;

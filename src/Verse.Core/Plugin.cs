@@ -91,10 +91,7 @@ public interface IPlugin
 	public bool IsUnique => true;
 }
 
-public interface IStaticPlugin
-{
-	public static abstract IPlugin CreatePlugin(App app);
-}
+
 
 /// <summary>
 /// A fake plugin that is stubbed in to temporally occupy an entry in an App's plugin list while its building the real plugin.

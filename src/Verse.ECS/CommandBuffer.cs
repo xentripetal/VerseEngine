@@ -15,7 +15,7 @@ public class CommandBuffer
 		_operations.Enqueue(command);
 	}
 
-	public void Set<T>(EcsID entity, T component) where T : struct
+	public void Set<T>(EcsID entity, T component) 
 	{
 		AddCommand(new SetComponentCommand<T>(entity, component));
 	}
@@ -25,7 +25,7 @@ public class CommandBuffer
 		AddCommand(new SetChangedCommand<T>(entity));
 	}
 
-	public void Unset<T>(EcsID entity) where T : struct
+	public void Unset<T>(EcsID entity) 
 	{
 		AddCommand(new UnsetComponentCommand<T>(entity));
 	}
@@ -47,7 +47,6 @@ public interface ICommand
 }
 
 public record struct SetComponentCommand<T>(EcsID Entity, T Component) : ICommand
-	where T : struct
 {
 	public void Apply(World world) => world.Entity(Entity).Set(Component);
 }
@@ -59,7 +58,6 @@ public record struct DeleteEntityCommand : ICommand
 }
 
 public record struct UnsetComponentCommand<T>(EcsID Entity) : ICommand
-	where T : struct
 {
 	public void Apply(World world) => world.Entity(Entity).Unset<T>();
 }

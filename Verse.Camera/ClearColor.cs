@@ -1,7 +1,7 @@
 using Verse.ECS;
 using Verse.MoonWorks.Graphics;
 
-namespace Verse.Render.Camera;
+namespace Verse.Camera;
 
 /// <summary>
 /// For a <see cref="Camera"/>, specifies the color used to clear the viewport before rendering. or when writing to the final render target texture.
@@ -31,7 +31,10 @@ public struct ClearColorConfig : IDefault<ClearColorConfig>
 /// </summary>
 /// <remarks>Individual cameras may use <see cref="ClearColorConfig."/></remarks>
 /// <param name="color"></param>
-public struct ClearColor(Color color) : IDefault<ClearColor>
+public record struct ClearColor(Color Color) : IDefault<ClearColor>
 {
-	public static ClearColor Default() => new ClearColor(Color.DarkSlateGray);
+	public ClearColor() : this(Color.DarkSlateGray) { }
+	
+	public Color Color = Color;
+	public static ClearColor Default() => new ClearColor();
 }

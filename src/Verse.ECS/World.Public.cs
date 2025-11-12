@@ -493,5 +493,19 @@ public sealed partial class World
 	}
 
 
+	public bool TryRegisterRequiredComponentsWith<TComponent, TRequired>(Func<TRequired> ctor)
+	{
+		var requiree = Registry.RegisterComponent<TComponent>();
+		// todo check if we already have an archetype with this component and panic if present
+		var required = Registry.RegisterComponent<TRequired>();
+		
+	} 
 
+
+	public void RegisterRequiredComponents<TComponent, TRequired>() where TRequired : new()
+	{
+		if (!TryRegisterRequiredComponentsWith<TComponent, TRequired>(() => new TRequired())) {
+			throw new InvalidOperationException($"Could not register required components for {typeof(TComponent).FullName}");
+		}
+	}
 }

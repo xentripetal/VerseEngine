@@ -26,8 +26,21 @@
               "icon": "lucide-trello",
               "title": "Engine Prep"
             }
+          },
+          {
+            "id": "88c6ee75e5feb88d",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.9.14"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.9.14"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       },
       {
         "id": "fcc29bdd0b566a35",
@@ -196,8 +209,9 @@
       "obsidian-kanban:Create new board": false
     }
   },
-  "active": "122efbe4aeaeb39c",
+  "active": "88c6ee75e5feb88d",
   "lastOpenFiles": [
+    "misc.md",
     "todo/Backlog.md",
     "todo/Sprints/Engine Prep.md",
     "Misc/Discriminated Unions.md",

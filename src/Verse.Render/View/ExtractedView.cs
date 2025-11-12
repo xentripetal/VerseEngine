@@ -4,7 +4,6 @@ using Verse.Math;
 using Verse.MoonWorks;
 using Verse.MoonWorks.Graphics;
 using Verse.MoonWorks.Graphics.Resources;
-using Verse.Render.Camera;
 using Verse.Transform;
 
 namespace Verse.Render.View;

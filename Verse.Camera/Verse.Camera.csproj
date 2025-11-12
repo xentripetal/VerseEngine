@@ -9,6 +9,8 @@
     <ItemGroup>
       <ProjectReference Include="..\src\Verse.Core\Verse.Core.csproj" />
       <ProjectReference Include="..\src\Verse.Math\Verse.Math.csproj" />
+      <ProjectReference Include="..\src\Verse.MoonWorks\Verse.MoonWorks.csproj" />
+      <ProjectReference Include="..\src\Verse.Transform\Verse.Transform.csproj" />
     </ItemGroup>
 
 </Project>

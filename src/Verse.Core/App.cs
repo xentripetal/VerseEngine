@@ -153,25 +153,25 @@ public class App : IDisposable
 		SubApps.Main.InitResource<T>();
 		return this;
 	}
-	
+
 	public App InitWorldResource<T>() where T : IFromWorld<T>
 	{
 		SubApps.Main.InitWorldResource<T>();
 		return this;
 	}
-	
+
 	public App InsertResource<T>(T value)
 	{
 		SubApps.Main.InsertResource(value);
 		return this;
 	}
-	
+
 	public App InitResource<T>(T value)
 	{
 		SubApps.Main.InitResource(value);
 		return this;
 	}
-	
+
 	public App ConfigureSets(string schedule, IIntoSystemSetConfigs configs)
 	{
 		SubApps.Main.ConfigureSets(schedule, configs);
@@ -234,7 +234,7 @@ public class App : IDisposable
 	{
 		return T.FromWorld(World).Schedule(this);
 	}
-	
+
 	public App AddPlugin<T>() where T : IPlugin, new() => AddPlugin(new T());
 	public App AddWorldPlugin<T>() where T : IPlugin, IFromWorld<T> => AddPlugin(T.FromWorld(World));
 	public bool IsPluginAdded(IPlugin plugin)
@@ -291,6 +291,11 @@ public class App : IDisposable
 				SubApps = null!;
 			}
 		}
+	}
+	public void RegisterRequiredComponents<TComponent, TRequired>()
+		where TRequired : new()
+	{
+		World.RegisterRequiredComponents<TComponent, TRequired>();
 	}
 }
 

@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\Verse.Camera\Verse.Camera.csproj" />
         <ProjectReference Include="..\Verse.ECS\Verse.ECS.csproj" />
         <ProjectReference Include="..\Verse.Tracing\Verse.Tracing.csproj"/>
         <ProjectReference Include="..\Verse.Assets\Verse.Assets.csproj"/>

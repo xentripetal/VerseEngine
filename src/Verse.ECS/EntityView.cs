@@ -63,7 +63,7 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	/// <inheritdoc cref="World.Set{T}(EcsID, T)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Set<T>(T component) where T : struct
+	public readonly EntityView Set<T>(T component) 
 	{
 		World.Set(Id, component);
 		return this;
@@ -79,7 +79,7 @@ public readonly struct EntityView : IEquatable<EcsID>, IEquatable<EntityView>, I
 
 	/// <inheritdoc cref="World.Unset{T}(EcsID)" />
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly EntityView Unset<T>() where T : struct
+	public readonly EntityView Unset<T>() 
 	{
 		World.Unset<T>(Id);
 		return this;

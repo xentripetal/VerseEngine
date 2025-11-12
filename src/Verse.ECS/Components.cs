@@ -281,5 +281,20 @@ public class ComponentRegistry(World world)
 		EcsAssert.Panic(false, $"component not found with id {id}");
 		return null;
 	}
+
+	public bool RegisterRequiredComponent<T>(ComponentId requiree, ComponentId required, Func<T> ctor)
+	{
+		throw new NotImplementedException();
+	}
 }
 #pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
+
+public struct RequiredComponents
+{
+	public OrderedDictionary<ComponentId, RequiredComponent>
+}
+
+public struct RequiredComponent
+{
+	public Func<>
+}
