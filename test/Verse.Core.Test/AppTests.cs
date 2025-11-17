@@ -230,7 +230,7 @@ public class AppTests : IDisposable
 }
 
 // Test plugin for App tests
-public class TestPlugin : IPlugin, IStaticPlugin
+public class TestPlugin : IPlugin
 {
 	public string Name { get; set; } = "TestPlugin";
 	public bool WasBuilt { get; private set; }
@@ -241,5 +241,4 @@ public class TestPlugin : IPlugin, IStaticPlugin
 		WasBuilt = true;
 		BuildApp = app;
 	}
-	public static IPlugin CreatePlugin(App app) => new TestPlugin();
 }

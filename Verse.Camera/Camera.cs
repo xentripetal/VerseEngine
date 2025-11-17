@@ -1,14 +1,13 @@
-﻿using System.Drawing;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
-using SDL3;
+using Serilog;
 using Verse.Assets;
 using Verse.ECS;
 using Verse.Math;
+using Verse.MoonWorks;
 using Verse.MoonWorks.Assets;
 using Verse.MoonWorks.Graphics;
 using Verse.Transform;
-using Color = Verse.MoonWorks.Graphics.Color;
 using Rect = Verse.Math.Rect;
 
 namespace Verse.Camera;
@@ -20,6 +19,18 @@ public struct Viewport
 		PhysicalPosition = new UVec2();
 		PhysicalSize = new UVec2(1, 1);
 		Depth = new TRange<float>(0, 1);
+	}
+
+	public Verse.MoonWorks.Graphics.Viewport ToSDL()
+	{
+		return new Verse.MoonWorks.Graphics.Viewport {
+			X = PhysicalPosition.X,
+			Y = PhysicalPosition.Y,
+			W = PhysicalSize.X,
+			H = PhysicalSize.Y,
+			MinDepth = Depth.Start,
+			MaxDepth = Depth.End,
+		};
 	}
 
 	public Viewport(UVec2 physicalPosition, UVec2 physicalSize, TRange<float> depth)
@@ -37,12 +48,50 @@ public struct Viewport
 	/// The minimum and maximum depth to render (on a scale from 0.0 to 1.0)
 	/// </summary>
 	public TRange<float> Depth;
+
+	/// <summary>
+	/// Cut the viewport rectangle so that it lies inside a rectangle of the
+	/// given size.
+	/// </summary>
+	/// <remarks>
+	/// If either of the viewport's position coordinates lies outside the given
+	/// dimensions, it will be moved just inside first. If either of the given
+	/// dimensions is zero, the position and size of the viewport rectangle will
+	/// both be set to zero in that dimension.
+	/// </remarks>
+	public void ClampToSize(UVec2 size)
+	{
+		// If the origin of the viewport rect is outside, then adjust so that its barely inside. Then cut off the part that is outside
+		if (PhysicalSize.X + PhysicalPosition.X > size.X) {
+			if (PhysicalPosition.X < size.X) {
+				PhysicalSize.X = size.X - PhysicalPosition.X;
+			} else if (size.X > 0) {
+				PhysicalPosition.X = size.X - 1;
+				PhysicalSize.X = 1;
+			} else {
+				PhysicalPosition.X = 0;
+				PhysicalSize.X = 0;
+			}
+		}
+
+		if (PhysicalSize.Y + PhysicalPosition.Y > size.Y) {
+			if (PhysicalPosition.Y < size.Y) {
+				PhysicalSize.Y = size.Y - PhysicalPosition.Y;
+			} else if (size.Y > 0) {
+				PhysicalPosition.Y = size.Y - 1;
+				PhysicalSize.Y = 1;
+			} else {
+				PhysicalPosition.Y = 0;
+				PhysicalSize.Y = 0;
+			}
+		}
+	}
 }
 
 /// <summary>
 /// Settings to define a camera sub view
 /// </summary>
-public struct SubCameraView
+public record struct SubCameraView
 {
 	/// <summary>
 	/// Size of the entire camera view
@@ -58,7 +107,7 @@ public struct SubCameraView
 	public UVec2 Size;
 }
 
-public struct Camera
+public struct Camera 
 {
 	public Camera()
 	{
@@ -76,7 +125,7 @@ public struct Camera
 	/// <summary>
 	/// If set, this camera will render to the given <see cref="Viewport"/> rectangle with the configured <see cref="RenderTarget"/>
 	/// </summary>
-	Viewport? Viewport;
+	public Viewport? Viewport;
 	/// <summary>
 	/// Cameras with a higher order are rendered later, and thus on top of lower order cameras
 	/// </summary>
@@ -148,6 +197,31 @@ public struct Camera
 	/// <returns></returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Rect? LogicalViewportRect() => PhysicalViewportRect()?.ToRect();
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Vector2? LogicalViewportSize()
+	{
+		if (Viewport == null) return LogicalTargetSize();
+		return ToLogical(Viewport.Value.PhysicalSize);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Vector2? LogicalTargetSize()
+	{
+		if (Computed.RenderTargetInfo == null) return null;
+		return ToLogical(Computed.RenderTargetInfo.Value.PhysicalSize);
+	}
+
+	/// <summary>
+	/// Converts a physical size in this Camera to a logical size
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Vector2? ToLogical(UVec2 physicalSize)
+	{
+		if (Computed.RenderTargetInfo == null) return null;
+		var scale = Computed.RenderTargetInfo.Value.ScaleFactor;
+		return new Vector2(physicalSize.X / scale, physicalSize.Y / scale);
+	}
 
 	/// <summary>
 	/// Given a point in world space, use the cameras viewport to compute the Normalized Device Coordinates (NDC) of the point.
@@ -292,6 +366,23 @@ public record struct RenderTarget
 	public bool IsWindow => Window != null;
 	public bool IsImage => Image != null;
 	public bool IsManual => Size != null;
+
+	public readonly NormalizedRenderTarget Normalize(ulong primaryWindow)
+	{
+		if (IsWindow) {
+			var window = Window!.Value.IsPrimaryWindow
+				? new NormalizedWindowReference(primaryWindow)
+				: new NormalizedWindowReference(Window.Value.EntityId!.Value);
+			return new NormalizedRenderTarget(window);
+		}
+		if (IsManual) {
+			return new NormalizedRenderTarget(Size!.Value);
+		}
+		if (IsImage) {
+			return new NormalizedRenderTarget(Image!.Value.Handle, Image.Value.ScaleFactor);
+		}
+		return new NormalizedRenderTarget();
+	}
 }
 
 public record struct NormalizedRenderTarget
@@ -327,6 +418,43 @@ public record struct NormalizedRenderTarget
 	public bool IsWindow => Window != null;
 	public bool IsImage => Image != null;
 	public bool IsManual => Size != null;
+	public bool IsChanged(HashSet<ulong> changedWindowIds, HashSet<AssetId<Image>> changedImages)
+	{
+		if (Window != null) {
+			return changedWindowIds.Contains(Window.Value.EntityId);
+		}
+		if (Image != null) {
+			return changedImages.Contains(Image.Value.Handle.Id());
+		}
+		return false;
+	}
+	public RenderTargetInfo GetRenderTargetInfo(Query<Data<Window>> windowEntities, Assets<Image> images)
+	{
+		if (Window != null) {
+			foreach (var (entity, window) in windowEntities) {
+				if (entity.Ref.Id == Window.Value.EntityId) {
+					return new RenderTargetInfo {
+						PhysicalSize = new UVec2(window.Ref.Width, window.Ref.Height),
+						ScaleFactor = window.Ref.DisplayScale
+					};
+				}
+			}
+			throw new Exception("Window entity not found for render target");
+		}
+		if (Image != null) {
+			if (images.TryGet(Image.Value.Handle, out var image)) {
+				return new RenderTargetInfo {
+					PhysicalSize = new UVec2(image.Width, image.Height),
+					ScaleFactor = Image.Value.ScaleFactor
+				};
+			}
+			throw new Exception("Image not found for render target");
+		}
+		return new RenderTargetInfo {
+			PhysicalSize = Size!.Value,
+			ScaleFactor = 1.0f
+		};
+	}
 }
 
 /// <summary>

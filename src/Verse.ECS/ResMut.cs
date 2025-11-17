@@ -24,7 +24,7 @@ public class OptionalResMut<T> : ISystemParam, IFromWorld<OptionalResMut<T>>
 			value = currentRecord.Get<T>();
 			return true;
 		}
-		value = default;
+		value = default!;
 		return false;
 	}
 	
@@ -32,17 +32,17 @@ public class OptionalResMut<T> : ISystemParam, IFromWorld<OptionalResMut<T>>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get {
 			Ticks.Changed = Ticks.ThisRun;
-			if (currentRecord is null) return ref Unsafe.NullRef<T>();
+			if (currentRecord is null) return ref Unsafe.NullRef<T>()!;
 			return ref currentRecord.GetRef<T>()!;
 		}
 	}
 
 	public T? Value {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => currentRecord.Get<T>();
+		get => currentRecord!.Get<T>();
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		set {
-			currentRecord.GetRef<T>() = value;
+			currentRecord!.GetRef<T>() = value;
 			Ticks.Changed = Ticks.ThisRun;
 		}
 	}	
@@ -77,26 +77,26 @@ public class ResMut<T> : ISystemParam, IFromWorld<ResMut<T>>
 	/// <summary>
 	/// The component ID of the resource
 	/// </summary>
-	private ComponentId componentId;
+	private readonly ComponentId componentId;
 
 	/// <summary>
 	/// The current resource entry. This can only be used for the lifecycle of a single system execution as the entry
 	/// might move or be invalidated.
 	/// </summary>
-	private ResourceData currentRecord;
+	private ResourceData? currentRecord;
 
 	/// <summary>
 	/// The tick state of the resource
 	/// </summary>
 	public Ticks Ticks;
 
-	public ref T MutBypassChangeDetection => ref currentRecord.GetRef<T>();
+	public ref T MutBypassChangeDetection => ref currentRecord!.GetRef<T>();
 
 	public ref T MutValue {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get {
 			Ticks.Changed = Ticks.ThisRun;
-			return ref currentRecord.GetRef<T>();
+			return ref currentRecord!.GetRef<T>();
 		}
 	}
 
@@ -189,7 +189,7 @@ public class OptionalRes<T> : ISystemParam, IFromWorld<OptionalRes<T>>
 	/// </summary>
 	public Ticks Ticks;
 
-	public static OptionalResMut<T> FromWorld(World world) => new OptionalResMut<T>(world.RegisterResource<T>());
+	public static OptionalRes<T> FromWorld(World world) => new OptionalRes<T>(world.RegisterResource<T>());
 }
 
 public class Res<T> : ISystemParam, IFromWorld<Res<T>>

@@ -147,23 +147,6 @@ public class QueryTests : IDisposable
     }
 
     [Fact]
-    public void Query_Iter_ShouldReturnQueryIterator()
-    {
-        // Arrange
-        var entity = _world.Entity().Set(new QueryTestComponent { Value = 42 });
-
-        var queryBuilder = _world.QueryBuilder();
-        queryBuilder.With<QueryTestComponent>();
-        var query = queryBuilder.Build();
-
-        // Act
-        var iterator = query.Iter(1); // Using tick 1
-
-        // Assert
-        // iterator.Should().NotBeNull(); // Can't use Should() with ref structs
-    }
-
-    [Fact]
     public void Query_ChainedOperations_ShouldWork()
     {
         // Arrange
@@ -235,7 +218,7 @@ public class QueryTests : IDisposable
         var query = queryBuilder.Build();
 
         // Act
-        var iterator = query.Iter(1);
+        var iterator = query.Iter(new Tick(), new Tick());
         var archetypeCount = 0;
 
         while (iterator.Next())

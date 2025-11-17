@@ -498,7 +498,7 @@ public sealed partial class World
 		var requiree = Registry.RegisterComponent<TComponent>();
 		// todo check if we already have an archetype with this component and panic if present
 		var required = Registry.RegisterComponent<TRequired>();
-		
+		throw new NotImplementedException();
 	} 
 
 
@@ -507,5 +507,10 @@ public sealed partial class World
 		if (!TryRegisterRequiredComponentsWith<TComponent, TRequired>(() => new TRequired())) {
 			throw new InvalidOperationException($"Could not register required components for {typeof(TComponent).FullName}");
 		}
+	}
+
+	public RawComponentHooks RegisterComponentHook<T>()
+	{
+		return Registry.GetComponent<T>().Hooks;
 	}
 }

@@ -44,7 +44,7 @@ public class App : IDisposable
 	internal App(RunnerHandler runFn, SubApp main, params SubApp[] subApps)
 	{
 		SubApps = new SubApps(main, subApps);
-		_runnerFn = runFn;
+		runnerFn = runFn;
 	}
 
 	public static App Default()
@@ -64,7 +64,7 @@ public class App : IDisposable
 
 	public delegate AppExit RunnerHandler(App app);
 	public SubApps SubApps;
-	private RunnerHandler _runnerFn;
+	private RunnerHandler runnerFn;
 
 	private bool firstRun = true;
 
@@ -86,12 +86,12 @@ public class App : IDisposable
 			throw new ApplicationException("Cannot run while building plugins");
 		}
 
-		return _runnerFn(this);
+		return runnerFn(this);
 	}
 
-	public void SetRunner(RunnerHandler runnerFn)
+	public void SetRunner(RunnerHandler fn)
 	{
-		_runnerFn = runnerFn;
+		runnerFn = fn;
 	}
 
 	/// <summary>
@@ -276,7 +276,7 @@ public class App : IDisposable
 		SubApps.Subs.Remove(name);
 	}
 
-	private uint _isDisposed = 0;
+	private uint isDisposed;
 	public void Dispose()
 	{
 		Dispose(true);
@@ -285,17 +285,18 @@ public class App : IDisposable
 
 	protected virtual void Dispose(bool disposing)
 	{
-		if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 0) {
+		if (Interlocked.CompareExchange(ref isDisposed, 1, 0) == 0) {
 			if (disposing) {
 				SubApps.Dispose();
 				SubApps = null!;
 			}
 		}
 	}
-	public void RegisterRequiredComponents<TComponent, TRequired>()
+	public App RegisterRequiredComponents<TComponent, TRequired>()
 		where TRequired : new()
 	{
 		World.RegisterRequiredComponents<TComponent, TRequired>();
+		return this;
 	}
 }
 

@@ -6,15 +6,15 @@ namespace Verse.ECS;
 internal readonly struct Column
 {
 	public readonly Array Data;
-	public readonly uint[] ChangedTicks, AddedTicks;
+	public readonly Tick[] ChangedTicks, AddedTicks;
 	private readonly World _world;
 
 	internal Column(World world, ref readonly SlimComponent slimComponent, int chunkSize)
 	{
 		_world = world;
 		Data = world.Registry.GetArray(slimComponent.Id, chunkSize)!;
-		ChangedTicks = new uint[chunkSize];
-		AddedTicks = new uint[chunkSize];
+		ChangedTicks = new Tick[chunkSize];
+		AddedTicks = new Tick[chunkSize];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

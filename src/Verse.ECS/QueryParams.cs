@@ -88,19 +88,16 @@ public ref struct Optional<T> : IFilter<Optional<T>>
 public ref struct Changed<T> : IFilter<Changed<T>>
 	where T : struct
 {
-	private QueryIterator _iterator;
-	private Ptr<uint> _stateRow;
-	private int _row, _count;
-	private nint _size;
-	private Tick _lastRun, _thisRun;
+	private QueryIterator iterator;
+	private Ptr<Tick> changeTick;
+	private int row, count;
+	private nint size;
 
 	private Changed(QueryIterator iterator)
 	{
-		_iterator = iterator;
-		_row = -1;
-		_count = -1;
-		_lastRun = 0;
-		_thisRun = 0;
+		this.iterator = iterator;
+		row = -1;
+		count = -1;
 	}
 
 	[UnscopedRef]
@@ -119,34 +116,28 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	bool IQueryIterator<Changed<T>>.MoveNext()
 	{
-		if (++_row >= _count) {
-			if (!_iterator.Next())
+		if (++row >= count) {
+			if (!iterator.Next())
 				return false;
 
-			_row = 0;
-			_count = _iterator.Count;
-			var index = _iterator.GetColumnIndexOf<T>();
-			var states = _iterator.GetChangedTicks(index);
+			row = 0;
+			count = iterator.Count;
+			var index = iterator.GetColumnIndexOf<T>();
+			var states = iterator.GetChangedTicks(index);
 
 			if (states.IsEmpty) {
-				_stateRow.Value = ref Unsafe.NullRef<uint>();
-				_size = 0;
+				changeTick.Value = ref Unsafe.NullRef<Tick>();
+				size = 0;
 			} else {
-				_stateRow.Value = ref MemoryMarshal.GetReference(states);
-				_size = Unsafe.SizeOf<uint>();
+				changeTick.Value = ref MemoryMarshal.GetReference(states);
+				size = Unsafe.SizeOf<Tick>();
 			}
 		} else {
-			_stateRow.Value = ref Unsafe.AddByteOffset(ref _stateRow.Value, _size);
+			changeTick.Value = ref Unsafe.AddByteOffset(ref changeTick.Value, size);
 		}
 
 		// TODO why did tinyecs filter for < thisRun?
-		return _size > 0 && _stateRow.Value > _lastRun; //&& _stateRow.Value < _thisRun;
-	}
-
-	public void SetTicks(Tick lastRun, Tick thisRun)
-	{
-		_lastRun = lastRun;
-		_thisRun = thisRun;
+		return size > 0 && changeTick.Value.IsNewerThan(iterator.LastRun, iterator.ThisRun);
 	}
 }
 
@@ -157,19 +148,16 @@ public ref struct Changed<T> : IFilter<Changed<T>>
 public ref struct Added<T> : IFilter<Added<T>>
 	where T : struct
 {
-	private QueryIterator _iterator;
-	private Ptr<uint> _stateRow;
-	private int _row, _count;
-	private nint _size;
-	private Tick _lastRun, _thisRun;
+	private QueryIterator iterator;
+	private Cell<Tick> stateRow;
+	private int row, count;
+	private nint size;
 
 	private Added(QueryIterator iterator)
 	{
-		_iterator = iterator;
-		_row = -1;
-		_count = -1;
-		_lastRun = 0;
-		_thisRun = 0;
+		this.iterator = iterator;
+		row = -1;
+		count = -1;
 	}
 
 	[UnscopedRef]
@@ -188,36 +176,31 @@ public ref struct Added<T> : IFilter<Added<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	bool IQueryIterator<Added<T>>.MoveNext()
 	{
-		if (++_row >= _count) {
-			if (!_iterator.Next())
+		// TODO can we use the DataRow{T} from our parent query instead of re-iterating?
+		if (++row >= count) {
+			if (!iterator.Next())
 				return false;
 
-			_row = 0;
-			_count = _iterator.Count;
-			var index = _iterator.GetColumnIndexOf<T>();
-			var states = _iterator.GetAddedTicks(index);
+			row = 0;
+			count = iterator.Count;
+			var index = iterator.GetColumnIndexOf<T>();
+			var states = iterator.GetAddedTicks(index);
 
 			if (states.IsEmpty) {
-				_stateRow.Value = ref Unsafe.NullRef<uint>();
-				_size = 0;
+				stateRow.Value = ref Unsafe.NullRef<Tick>();
+				size = 0;
 			} else {
-				_stateRow.Value = ref MemoryMarshal.GetReference(states);
-				_size = Unsafe.SizeOf<uint>();
+				stateRow.Value = ref MemoryMarshal.GetReference(states);
+				size = Unsafe.SizeOf<uint>();
 			}
 		} else {
-			_stateRow.Value = ref Unsafe.AddByteOffset(ref _stateRow.Value, _size);
+			stateRow.Value = ref Unsafe.AddByteOffset(ref stateRow.Value, size);
 		}
 
-		return _size > 0 && _stateRow.Value >= _lastRun && _stateRow.Value < _thisRun;
-	}
-
-	public void SetTicks(Tick lastRun, Tick thisRun)
-	{
-		_lastRun = lastRun;
-		_thisRun = thisRun;
+		return size > 0 && stateRow.Value.IsNewerThan(iterator.LastRun, iterator.ThisRun);
 	}
 }
-
+ 
 public ref struct Writes<T> : IFilter<Writes<T>>
 	where T : struct
 {
@@ -236,26 +219,21 @@ public ref struct Writes<T> : IFilter<Writes<T>>
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	readonly bool IQueryIterator<Writes<T>>.MoveNext() => true;
-
-	public readonly void SetTicks(Tick lastRun, Tick thisRun) { }
 }
 
 public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
 	where T : struct
 {
-	private QueryIterator _iterator;
-	private Ptr<uint> _stateRow;
-	private int _row, _count;
-	private nint _size;
-	private Tick _lastRun, _thisRun;
+	private QueryIterator iterator;
+	private Ptr<Tick> stateRow;
+	private int row, count;
+	private nint size;
 
 	private MarkChanged(QueryIterator iterator)
 	{
-		_iterator = iterator;
-		_row = -1;
-		_count = -1;
-		_lastRun = new Tick();
-		_thisRun = new Tick();
+		this.iterator = iterator;
+		row = -1;
+		count = -1;
 	}
 
 	[UnscopedRef]
@@ -273,37 +251,31 @@ public ref struct MarkChanged<T> : IFilter<MarkChanged<T>>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	bool IQueryIterator<MarkChanged<T>>.MoveNext()
 	{
-		if (++_row >= _count) {
-			if (!_iterator.Next())
+		if (++row >= count) {
+			if (!iterator.Next())
 				return false;
 
-			_row = 0;
-			_count = _iterator.Count;
-			var index = _iterator.GetColumnIndexOf<T>();
-			var states = _iterator.GetChangedTicks(index);
+			row = 0;
+			count = iterator.Count;
+			var index = iterator.GetColumnIndexOf<T>();
+			var states = iterator.GetChangedTicks(index);
 
 			if (states.IsEmpty) {
-				_stateRow.Value = ref Unsafe.NullRef<uint>();
-				_size = 0;
+				stateRow.Value = ref Unsafe.NullRef<Tick>();
+				size = 0;
 			} else {
-				_stateRow.Value = ref MemoryMarshal.GetReference(states);
-				_size = Unsafe.SizeOf<uint>();
+				stateRow.Value = ref MemoryMarshal.GetReference(states);
+				size = Unsafe.SizeOf<Tick>();
 			}
 		} else {
-			_stateRow.Value = ref Unsafe.AddByteOffset(ref _stateRow.Value, _size);
+			stateRow.Value = ref Unsafe.AddByteOffset(ref stateRow.Value, size);
 		}
 
-		if (_size > 0) {
-			_stateRow.Value = _thisRun.Value;
+		if (size > 0) {
+			stateRow.Value = iterator.ThisRun;
 		}
 
 		return true;
-	}
-
-	public void SetTicks(Tick lastRun, Tick thisRun)
-	{
-		_lastRun = lastRun;
-		_thisRun = thisRun;
 	}
 }
 
@@ -318,11 +290,10 @@ public ref struct QueryIter<D, F>
 	private D _dataIterator;
 	private F _filterIterator;
 
-	internal QueryIter(Tick lastRun, Tick thisRun, QueryIterator iterator)
+	internal QueryIter(QueryIterator iterator)
 	{
 		_dataIterator = D.CreateIterator(iterator);
 		_filterIterator = F.CreateIterator(iterator);
-		_filterIterator.SetTicks(lastRun, thisRun);
 	}
 
 	[UnscopedRef]

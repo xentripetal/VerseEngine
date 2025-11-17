@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Verse.ECS.Systems;
 
 namespace Verse.ECS;
@@ -6,32 +5,6 @@ namespace Verse.ECS;
 public interface IEventParam
 {
 	void Clear();
-}
-
-public class EventRegistry()
-{
-	protected List<IEventParam> _eventParams = new List<IEventParam>();
-	public void Clear()
-	{
-		_eventParams.Clear();
-	}
-
-	/// <summary>
-	/// Updates all of the registered events in the world
-	/// </summary>
-	/// <param name="world"></param>
-	/// <param name="tick"></param>
-	public void Update(World world, uint tick)
-	{
-		foreach (var ev in _eventParams) {
-			ev.Clear();
-		}
-	}
-
-	internal void Register<T>(Messages<T> ev) where T : notnull
-	{
-		_eventParams.Add(ev);
-	}
 }
 
 partial class World : ISystemParam, IFromWorld<World>
@@ -44,12 +17,12 @@ partial class World : ISystemParam, IFromWorld<World>
 	public static World FromWorld(World world) => world;
 }
 
-public class Query<TQueryData> : Query<TQueryData, Empty>, ISystemParam, IFromWorld<Query<TQueryData>>
+public class Query<TQueryData> : Query<TQueryData, Empty>, IFromWorld<Query<TQueryData>>
 	where TQueryData : struct, IData<TQueryData>, IQueryIterator<TQueryData>, allows ref struct
 {
 	internal Query(Query query) : base(query) { }
 
-	public static Query<TQueryData> FromWorld(World world)
+	public new static Query<TQueryData> FromWorld(World world)
 	{
 		var builder = world.QueryBuilder();
 		TQueryData.Build(builder);
@@ -61,11 +34,13 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Query<TQ
 	where TQueryData : struct, IData<TQueryData>, IQueryIterator<TQueryData>, allows ref struct
 	where TQueryFilter : struct, IFilter<TQueryFilter>, allows ref struct
 {
-	private readonly Query _query;
+	private readonly Query query;
+	private ISystem? system;
 
 	internal Query(Query query)
 	{
-		_query = query;
+		this.query = query;
+		system = null;
 	}
 
 	public QueryIter<TQueryData, TQueryFilter> GetEnumerator()
@@ -86,7 +61,7 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Query<TQ
 
 	public TQueryData Single()
 	{
-		EcsAssert.Panic(_query.Count() == 1, "'Single' must match one and only one entity.");
+		EcsAssert.Panic(query.Count() == 1, "'Single' must match one and only one entity.");
 		var enumerator = GetEnumerator();
 		var ok = enumerator.MoveNext();
 		EcsAssert.Panic(ok, "'Single' is not matching any entity.");
@@ -94,24 +69,21 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Query<TQ
 	}
 
 	public int Count()
-		=> _query.Count();
+		=> query.Count();
 
-	private ISystem _system;
 	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
-		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, thisRun,
-			id == 0 ? _query.Iter(thisRun) : _query.Iter(id, thisRun));
-	public void Init(ISystem system, World world)
+		new QueryIter<TQueryData, TQueryFilter>(id == 0 ? query.Iter(system!.Meta.Ticks.LastRun, thisRun) : query.Iter(id, system!.Meta.Ticks.LastRun, thisRun));
+	public void Init(ISystem sys, World world)
 	{
-		_system = system;
-		_system.Meta.Access.Add(_query.BuildAccess());
+		system = sys;
+		system.Meta.Access.Add(query.BuildAccess());
 	}
 
 	private Tick thisRun;
-	public void ValidateParam(SystemMeta meta, World world, Tick thisRun)
+	public void ValidateParam(SystemMeta meta, World world, Tick tick)
 	{
-		this.thisRun = thisRun;
+		thisRun = tick;
 	}
-	public bool Prepare(ISystem system, World world) => true;
 	public static Query<TQueryData, TQueryFilter> FromWorld(World world)
 	{
 		var builder = world.QueryBuilder();
@@ -121,12 +93,12 @@ public class Query<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Query<TQ
 	}
 }
 
-public class Single<TQueryData> : Single<TQueryData, Empty>, ISystemParam, IFromWorld<Single<TQueryData>>
+public class Single<TQueryData> : Single<TQueryData, Empty>, IFromWorld<Single<TQueryData>>
 	where TQueryData : struct, IData<TQueryData>, IQueryIterator<TQueryData>, allows ref struct
 {
 	internal Single(Query query) : base(query) { }
 
-	public static Single<TQueryData> FromWorld(World world)
+	public new static Single<TQueryData> FromWorld(World world)
 	{
 		var builder = world.QueryBuilder();
 		TQueryData.Build(builder);
@@ -138,25 +110,33 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Single<
 	where TQueryData : struct, IData<TQueryData>, IQueryIterator<TQueryData>, allows ref struct
 	where TQueryFilter : struct, IFilter<TQueryFilter>, allows ref struct
 {
-	private readonly Query _query;
-
+	private readonly Query query;
+	private ISystem? system;
+	private Tick thisRun;
+	private Tick lastRun;
+	
 	internal Single(Query query)
 	{
-		_query = query;
+		this.query = query;
 	}
 
 	public TQueryData Get()
 	{
-		EcsAssert.Panic(_query.Count() == 1, "'Single' must match one and only one entity.");
+		EcsAssert.Panic(query.Count() == 1, "'Single' must match one and only one entity.");
 		var enumerator = GetIter();
 		var ok = enumerator.MoveNext();
 		EcsAssert.Panic(ok, "'Single' is not matching any entity.");
 		return enumerator.Current;
 	}
 
+	public ROEntityView GetEntity()
+	{
+		return query.Iter(lastRun, thisRun).Entities()[0];
+	}
+
 	public bool TryGet(out TQueryData data)
 	{
-		if (_query.Count() == 1) {
+		if (query.Count() == 1) {
 			var enumerator = GetIter();
 			var ok = enumerator.MoveNext();
 			if (ok) {
@@ -170,22 +150,21 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Single<
 	}
 
 	public int Count()
-		=> _query.Count();
+		=> query.Count();
 
-	private ISystem _system;
 	private QueryIter<TQueryData, TQueryFilter> GetIter(EcsID id = 0) =>
-		new QueryIter<TQueryData, TQueryFilter>(_system.Meta.Ticks.LastRun, thisRun,
-			id == 0 ? _query.Iter(thisRun) : _query.Iter(id, thisRun));
-	public void Init(ISystem system, World world)
+		new QueryIter<TQueryData, TQueryFilter>(id == 0 ? query.Iter(lastRun, thisRun) : query.Iter(id, lastRun, thisRun));
+	public void Init(ISystem sys, World world)
 	{
-		this._system = system;
-		this._system.Meta.Access.Add(_query.BuildAccess());
+		system = sys;
+		system.Meta.Access.Add(query.BuildAccess());
 	}
 
-	private Tick thisRun;
-	public void ValidateParam(SystemMeta meta, World world, Tick thisRun)
+	
+	public void ValidateParam(SystemMeta meta, World world, Tick tick)
 	{
-		this.thisRun = thisRun;
+		thisRun = tick;
+		lastRun = meta.Ticks.LastRun;
 	}
 
 	public static Single<TQueryData, TQueryFilter> FromWorld(World world)
@@ -200,8 +179,8 @@ public class Single<TQueryData, TQueryFilter> : ISystemParam, IFromWorld<Single<
 public sealed class Local<T> : ISystemParam, IFromWorld<Local<T>>
 	where T : new()
 {
-	private T _t = new T();
-	public ref T Value => ref _t;
+	private T t = new T();
+	public ref T Value => ref t;
 	public static implicit operator T(Local<T> reference)
 		=> reference.Value;
 
@@ -212,31 +191,31 @@ public sealed class Local<T> : ISystemParam, IFromWorld<Local<T>>
 
 public sealed class Commands : ISystemParam, IFromWorld<Commands>
 {
-	private CommandBuffer _buffer;
-	private readonly World _world;
+	private CommandBuffer? buffer;
+	private readonly World world;
 
 	internal Commands(World world)
 	{
-		_world = world;
+		this.world = world;
 	}
 
 	public EntityCommand Entity(EcsID id = 0)
 	{
-		var ent = _world.Entity(id);
-		return new EntityCommand(_buffer, ent.Id);
+		var ent = world.Entity(id);
+		return new EntityCommand(buffer!, ent.Id);
 	}
 
 	public void InsertResource<T>(T resource) 
 	{
-		_buffer.InsertResource(resource);
+		buffer!.InsertResource(resource);
 	}
 
-	public void Init(ISystem system, World world)
+	public void Init(ISystem system, World w)
 	{
-		_buffer = system.Buffer;
+		buffer = system.Buffer;
 		system.Meta.HasDeferred = true;
 	}
-	public void ValidateParam(SystemMeta meta, World world, Tick thisRun) { }
+	public void ValidateParam(SystemMeta meta, World w, Tick thisRun) { }
 	public static Commands FromWorld(World world) => new Commands(world);
 }
 
@@ -246,26 +225,26 @@ public readonly ref struct EntityCommand
 
 	internal EntityCommand(CommandBuffer buffer, EcsID id)
 	{
-		(this.buffer, ID) = (buffer, id);
+		(this.buffer, Id) = (buffer, id);
 	}
 
-	public readonly EcsID ID;
+	public readonly EcsID Id;
 
 	public EntityCommand Set<T>(T component) 
 	{
-		buffer.Set(ID, component);
+		buffer.Set(Id, component);
 		return this;
 	}
 
 	public EntityCommand Unset<T>() 
 	{
-		buffer.Unset<T>(ID);
+		buffer.Unset<T>(Id);
 		return this;
 	}
 
 	public EntityCommand Delete()
 	{
-		buffer.Delete(ID);
+		buffer.Delete(Id);
 		return this;
 	}
 }

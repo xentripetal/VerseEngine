@@ -11,36 +11,17 @@
             "id": "122efbe4aeaeb39c",
             "type": "leaf",
             "state": {
-              "type": "kanban",
+              "type": "markdown",
               "state": {
-                "file": "todo/Sprints/Engine Prep.md",
-                "kanbanViewState": {
-                  "kanban-plugin": "board",
-                  "list-collapse": [
-                    false,
-                    false,
-                    false
-                  ]
-                }
+                "file": "todo/Backlog.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-trello",
-              "title": "Engine Prep"
-            }
-          },
-          {
-            "id": "88c6ee75e5feb88d",
-            "type": "leaf",
-            "state": {
-              "type": "release-notes",
-              "state": {
-                "currentVersion": "1.9.14"
-              },
-              "icon": "lucide-book-up",
-              "title": "Release Notes 1.9.14"
+              "icon": "lucide-file",
+              "title": "Backlog"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       },
       {
         "id": "fcc29bdd0b566a35",
@@ -206,17 +187,28 @@
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
       "bases:Create new base": false,
-      "obsidian-kanban:Create new board": false
+      "obsidian-kanban:Create new board": false,
+      "tasknotes:Open mini calendar": false,
+      "tasknotes:Open advanced calendar": false,
+      "tasknotes:Open task list": false,
+      "tasknotes:Open notes": false,
+      "tasknotes:Open agenda": false,
+      "tasknotes:Open kanban board": false,
+      "tasknotes:Open pomodoro": false,
+      "tasknotes:Open pomodoro stats": false,
+      "tasknotes:Create new task": false
     }
   },
-  "active": "88c6ee75e5feb88d",
+  "active": "122efbe4aeaeb39c",
   "lastOpenFiles": [
+    "todo/QueryReadWrites.md",
+    "notes/Untitled.md",
+    "Misc/Discriminated Unions.md",
+    "notes",
+    "todo/Sprints/Engine Prep.md",
     "misc.md",
     "todo/Backlog.md",
-    "todo/Sprints/Engine Prep.md",
-    "Misc/Discriminated Unions.md",
     "Misc",
-    "todo/QueryReadWrites.md",
     "Projects.md",
     "todo/Sprints"
   ]

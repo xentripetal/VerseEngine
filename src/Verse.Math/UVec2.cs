@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Verse.Math;
 
-public struct UVec2
+public record struct UVec2 : IComparable<UVec2>
 {
 	public uint X, Y;
 
@@ -43,6 +43,12 @@ public struct UVec2
 	public static UVec2 operator /(UVec2 a, uint b) => new (a.X / b, a.Y / b);
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static UVec2 operator *(uint b, UVec2 a) => new (a.X * b, a.Y * b);
+	
+	public static UVec2 operator *(UVec2 a, float b) => new ((uint)(a.X * b), (uint)(a.Y * b));
+	public static UVec2 operator *(float a, UVec2 b) => new ((uint)(a * b.X), (uint)(a * b.Y));
+	
+	public static UVec2 operator /(UVec2 a, float b) => new ((uint)(a.X / b), (uint)(a.Y / b));
+	public static UVec2 operator /(float a, UVec2 b) => new ((uint)(a / b.X), (uint)(a / b.Y));
 
 	/// <summary>
 	/// Returns a vector with the minimum components of this and another vector
@@ -85,4 +91,12 @@ public struct UVec2
 	
 	public Vector2 AsVector2() => new(X, Y);
 	public static implicit operator Vector2(UVec2 v) => v.AsVector2();
+	public int CompareTo(UVec2 other)
+	{
+		var xComparison = X.CompareTo(other.X);
+		if (xComparison != 0) return xComparison;
+		return Y.CompareTo(other.Y);
+	}
+	public bool Equals(UVec2 other) => X == other.X && Y == other.Y;
+	public override int GetHashCode() => HashCode.Combine(X, Y);
 }

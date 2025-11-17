@@ -1,3 +1,5 @@
+using CommunityToolkit.HighPerformance.Helpers;
+
 namespace Verse.ECS;
 
 /// <summary>
@@ -30,7 +32,6 @@ public enum StorageType
 	/// </summary>
 	SparseSet
 }
-
 
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 internal sealed class ComponentComparer :
@@ -107,11 +108,23 @@ public class Component
 	public bool IsDynamic => Type.IsEntityTag;
 }
 
-public struct RawComponentHooks
+public class RawComponentHooks
 {
-	public unsafe delegate*<EntityView, void*, void> OnAdd;
-	public unsafe delegate*<EntityView, void*, void> OnSet;
-	public unsafe delegate*<EntityView, void*, void> OnRemove;
+	public Action<EntityView, IntPtr>? OnAdd;
+	public Action<EntityView, IntPtr>? OnSet;
+	public Action<EntityView, IntPtr>? OnRemove;
+
+	public void SetOnAdd(Action<EntityView> action)
+	{
+		if (OnAdd != null) throw new InvalidOperationException("OnAdd hook already set");
+		OnAdd = (view, _) => action(view);
+	}
+
+	public void SetOnRemove(Action<EntityView> action)
+	{
+		if (OnRemove != null) throw new InvalidOperationException("OnRemove hook already set");
+		OnRemove = (view, _) => action(view);
+	}
 }
 
 public interface IHookedComponent<T>
@@ -120,19 +133,19 @@ public interface IHookedComponent<T>
 	public void OnSet(EntityView view);
 	public void OnRemove(EntityView view);
 
-	internal static unsafe void DynOnAdd(EntityView view, void* data)
+	internal static unsafe void DynOnAdd(EntityView view, IntPtr data)
 	{
 		var self = (IHookedComponent<T>*)data;
 		self->OnAdd(view);
 	}
 
-	internal static unsafe void DynOnSet(EntityView view, void* data)
+	internal static unsafe void DynOnSet(EntityView view, IntPtr data)
 	{
 		var self = (IHookedComponent<T>*)data;
 		self->OnSet(view);
 	}
 
-	internal static unsafe void DynOnRemove(EntityView view, void* data)
+	internal static unsafe void DynOnRemove(EntityView view, IntPtr data)
 	{
 		var self = (IHookedComponent<T>*)data;
 		self->OnRemove(view);
@@ -149,11 +162,9 @@ public class Component<T> : Component
 	public Component(ComponentId id, World world) : base(ComponentType.OfCLRType(typeof(T), StaticSize), StaticName, id, world, CreateArray)
 	{
 		if (typeof(T).IsAssignableTo(typeof(IHookedComponent<T>))) {
-			unsafe {
-				Hooks.OnAdd = &IHookedComponent<T>.DynOnAdd;
-				Hooks.OnSet = &IHookedComponent<T>.DynOnSet;
-				Hooks.OnRemove = &IHookedComponent<T>.DynOnRemove;
-			}
+			Hooks.OnAdd = IHookedComponent<T>.DynOnAdd;
+			Hooks.OnSet = IHookedComponent<T>.DynOnSet;
+			Hooks.OnRemove = IHookedComponent<T>.DynOnRemove;
 		}
 	}
 
@@ -199,7 +210,7 @@ public class ComponentRegistry(World world)
 	{
 		return Interlocked.Increment(ref _index);
 	}
-	public ComponentId RegisterComponent<T>() 
+	public ComponentId RegisterComponent<T>()
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
 			return id;
@@ -218,7 +229,7 @@ public class ComponentRegistry(World world)
 		return ref cmp.Slim;
 	}
 
-	public ref readonly SlimComponent GetSlimComponent<T>() 
+	public ref readonly SlimComponent GetSlimComponent<T>()
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
 			return ref components[id].Slim;
@@ -234,7 +245,7 @@ public class ComponentRegistry(World world)
 		}
 		return null;
 	}
-	
+
 
 	public Component GetComponent(EcsID id)
 	{
@@ -244,7 +255,7 @@ public class ComponentRegistry(World world)
 		return cmp;
 	}
 
-	public Component GetComponent<T>() where T : struct
+	public Component GetComponent<T>()
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
 			return components[id];
@@ -261,7 +272,7 @@ public class ComponentRegistry(World world)
 		var c = new Component<T>(ClaimKey(), world);
 		resourceIndices.Add(typeof(T), c.Id);
 		components.Add(c.Id, c);
-		return c.Id;	
+		return c.Id;
 	}
 
 	public ComponentId? ResourceId<T>()
@@ -291,10 +302,7 @@ public class ComponentRegistry(World world)
 
 public struct RequiredComponents
 {
-	public OrderedDictionary<ComponentId, RequiredComponent>
+	public OrderedDictionary<ComponentId, RequiredComponent> Direct;
 }
 
-public struct RequiredComponent
-{
-	public Func<>
-}
+public struct RequiredComponent { }

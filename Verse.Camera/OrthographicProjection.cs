@@ -107,6 +107,55 @@ public struct OrthographicProjection()
 
 		var originX = projectionWidth * ViewportOrigin.X;
 		var originY = projectionHeight * ViewportOrigin.Y;
-		Area = new Rect(Scale * -originX, Scale * -originY, Scale * (projectionWidth- originX), Scale * (projectionHeight - originY));
+		Area = new Rect(Scale * -originX, Scale * -originY, Scale * (projectionWidth - originX), Scale * (projectionHeight - originY));
+	}
+	public readonly Matrix4x4 GetClipFromViewForSub(SubCameraView subView)
+	{
+		float fullWidth = subView.FullSize.X;
+		float fullHeight = subView.FullSize.Y;
+		float offsetX = subView.Offset.X;
+		float offsetY = subView.Offset.Y;
+		float subWidth = subView.Size.X;
+		float subHeight = subView.Size.Y;
+
+		float fullAspect = fullWidth / fullHeight;
+
+		// Base the vertical size on Area and adjust the horizontal size
+		float top = Area.Max.Y;
+		float bottom = Area.Min.Y;
+		float orthoHeight = top - bottom;
+		float orthoWidth = orthoHeight * fullAspect;
+
+		// Center the orthographic area horizontally
+		float centerX = (Area.Max.X + Area.Min.X) / 2.0f;
+		float left = centerX - orthoWidth / 2.0f;
+		float right = centerX + orthoWidth / 2.0f;
+
+		// Calculate scaling factors
+		float scaleW = (right - left) / fullWidth;
+		float scaleH = (top - bottom) / fullHeight;
+
+		// Calculate the new orthographic bounds
+		float leftPrime = left + scaleW * offsetX;
+		float rightPrime = leftPrime + scaleW * subWidth;
+		float topPrime = top - scaleH * offsetY;
+		float bottomPrime = topPrime - scaleH * subHeight;
+
+		// NOTE: near and far are swapped to invert the depth range from [0,1] to [1,0]
+		// This is for interoperability with pipelines using infinite reverse perspective projections.
+		return Matrix4x4.CreateOrthographicOffCenter(
+			leftPrime,
+			rightPrime,
+			bottomPrime,
+			topPrime,
+			Far,
+			Near
+		);
+	}
+	public readonly Matrix4x4 GetClipFromView()
+	{
+		// NOTE: near and far are swapped to invert the depth range from [0,1] to [1,0]
+		// This is for interoperability with pipelines using infinite reverse perspective projections.
+		return Matrix4x4.CreateOrthographicOffCenter(Area.Min.X, Area.Min.Y, Area.Max.X, Area.Max.Y, Far, Near);
 	}
 }

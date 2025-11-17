@@ -4,6 +4,8 @@ using SDL3;
 
 namespace Verse.MoonWorks;
 
+public struct PrimaryWindow;
+
 /// <summary>
 ///     Represents a window in the client operating system. <br />
 ///     Every Game has a MainWindow automatically. <br />

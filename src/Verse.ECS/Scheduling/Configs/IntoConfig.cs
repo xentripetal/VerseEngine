@@ -18,11 +18,26 @@ public interface IIntoNodeConfigs<T>
     /// <returns></returns>
     public NodeConfigs<T> InSet(IIntoSystemSet set) => IntoConfigs().InSet(set);
 
+    public NodeConfigs<T> InSet(Enum set)
+    {
+        return IntoConfigs().InSet(EnumSet.Of(set));
+    }
+
     public NodeConfigs<T> InSet<TEnum>(TEnum set) where TEnum : struct, Enum => IntoConfigs().InSet(set);
+
+    public NodeConfigs<T> Before(Enum set)
+    {
+        return IntoConfigs().Before(EnumSet.Of(set));
+    }
 
     public NodeConfigs<T> Before(IIntoSystemSet set) => IntoConfigs().Before(set);
 
     public NodeConfigs<T> After(IIntoSystemSet set) => IntoConfigs().After(set);
+    
+    public NodeConfigs<T> After(Enum set)
+    {
+        return IntoConfigs().After(EnumSet.Of(set));
+    }
 
     public NodeConfigs<T> BeforeIgnoreDeferred(IIntoSystemSet set) => IntoConfigs().BeforeIgnoreDeferred(set);
 

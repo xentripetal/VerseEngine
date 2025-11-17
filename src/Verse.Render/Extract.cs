@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Serilog;
+using Verse.Camera;
 using Verse.Core;
 using Verse.ECS;
 using Verse.ECS.Systems;
@@ -20,7 +21,6 @@ public interface IExtractComponent<T>
 {
 	T? Extract(T value);
 }
-
 
 public class Extract<T> : ISystemParam, IFromWorld<Extract<T>>
 	where T : ISystemParam, IFromWorld<T>
@@ -80,12 +80,34 @@ public struct ExtractResourcePlugin<T> : IPlugin
 	}
 }
 
-public struct ExtractComponentPlugin<T> : IPlugin
+public readonly struct ExtractComponentPlugin<T> : IPlugin
 {
-	public bool OnlyExtractVisible;
+	public ExtractComponentPlugin()
+	{
+		OnlyExtractVisible = false;
+	}
 
+	public ExtractComponentPlugin(bool onlyExtractVisible)
+	{
+		OnlyExtractVisible = onlyExtractVisible;
+	}
 
-	public void Build(App app) { }
+	public readonly bool OnlyExtractVisible;
+
+	public void Build(App app)
+	{
+		app.AddPlugin<SyncComponentPlugin<T>>();
+		var renderApp = app.GetSubApp(RenderApp.Name);
+		if (renderApp != null) {
+			if (OnlyExtractVisible) {
+				var extract = ExtractVisibleComponents;
+				renderApp.AddSystems(RenderSchedules.Extract, FuncSystem.Of(extract));
+			} else {
+				var extract = ExtractComponents;
+				renderApp.AddSystems(RenderSchedules.Extract, FuncSystem.Of(extract));
+			}
+		}
+	}
 
 	public static T? Extract(T value)
 	{
@@ -105,6 +127,21 @@ public struct ExtractComponentPlugin<T> : IPlugin
 				commands.Entity(entity.Ref.EntityId).Unset<T>();
 			}
 		}
-		
+
+	}
+
+	public static void ExtractVisibleComponents(Commands commands, Extract<Query<Data<RenderEntity, ViewVisibility, T>>> query)
+	{
+		foreach (var (entity, visibility, queryItem) in query.Param) {
+			if (visibility.Ref.Visible) {
+				var extracted = Extract(queryItem.Ref);
+
+				if (extracted != null) {
+					commands.Entity(entity.Ref.EntityId).Set<T>(extracted);
+				} else {
+					commands.Entity(entity.Ref.EntityId).Unset<T>();
+				}
+			}
+		}
 	}
 }

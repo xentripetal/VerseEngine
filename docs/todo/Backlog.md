@@ -14,6 +14,7 @@
 - [ ] Delete tracking
 - [ ] Dispose behavior for components
 - [ ] From World behavior for components
+- [ ] Review existing dispose behaviors (subapp/world/app)
 - [ ] Dependency injection of managed classes. 
   - track dependencies in their systems
 - [ ] Assets

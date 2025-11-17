@@ -94,14 +94,14 @@ public sealed class Query
 		return _matchedArchetypes.Sum(static s => s.Count);
 	}
 
-	public QueryIterator Iter(Tick tick)
+	public QueryIterator Iter(Tick lastRun, Tick thisRun)
 	{
 		Match();
 
-		return Iter(CollectionsMarshal.AsSpan(_matchedArchetypes), 0, -1, tick);
+		return Iter(CollectionsMarshal.AsSpan(_matchedArchetypes), 0, -1, lastRun, thisRun);
 	}
 
-	public QueryIterator Iter(EcsID entity, Tick tick)
+	public QueryIterator Iter(EcsID entity, Tick lastRun, Tick thisRun)
 	{
 		Match();
 
@@ -110,15 +110,15 @@ public sealed class Query
 			foreach (var arch in _matchedArchetypes) {
 				if (arch.HashId != record.Archetype.HashId) continue;
 				var archetypes = new ReadOnlySpan<Archetype>(ref record.Archetype);
-				return Iter(archetypes, record.Row, 1, tick);
+				return Iter(archetypes, record.Row, 1, lastRun, thisRun);
 			}
 		}
 
-		return Iter([], 0, 0, tick);
+		return Iter([], 0, 0, lastRun, thisRun);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, Tick tick) => new QueryIterator(archetypes, Terms, _indices, start, count, tick);
+	private QueryIterator Iter(ReadOnlySpan<Archetype> archetypes, int start, int count, Tick lastRun, Tick thisRun) => new QueryIterator(archetypes, Terms, _indices, start, count, lastRun, thisRun);
 
 	public FilteredAccess BuildAccess()
 	{
@@ -153,36 +153,37 @@ public sealed class Query
 [SkipLocalsInit]
 public ref struct QueryIterator
 {
-	private ReadOnlySpan<Archetype>.Enumerator _archetypeIterator;
-	private ReadOnlySpan<ArchetypeChunk>.Enumerator _chunkIterator;
-	private readonly ReadOnlySpan<IQueryTerm> _terms;
-	private readonly Span<int> _indices;
-	private readonly int _start, _startSafe, _count;
-	private readonly Tick _tick;
+	private ReadOnlySpan<Archetype>.Enumerator archetypeIterator;
+	private ReadOnlySpan<ArchetypeChunk>.Enumerator chunkIterator;
+	private readonly ReadOnlySpan<IQueryTerm> terms;
+	private readonly Span<int> indices;
+	private readonly int start, startSafe, count;
+	public readonly Tick LastRun, ThisRun;
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count, Tick tick)
+	internal QueryIterator(ReadOnlySpan<Archetype> archetypes, ReadOnlySpan<IQueryTerm> terms, Span<int> indices, int start, int count, Tick lastRun, Tick thisRun)
 	{
-		_archetypeIterator = archetypes.GetEnumerator();
-		_terms = terms;
-		_indices = indices;
-		_start = start;
-		_startSafe = start & Archetype.CHUNK_THRESHOLD;
-		_count = count;
-		_tick = tick;
+		archetypeIterator = archetypes.GetEnumerator();
+		this.terms = terms;
+		this.indices = indices;
+		this.start = start;
+		startSafe = start & Archetype.CHUNK_THRESHOLD;
+		this.count = count;
+		LastRun = lastRun;
+		ThisRun = thisRun;
 	}
 
 	public readonly int Count {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => _count > 0 ? Math.Min(_count, _chunkIterator.Current.Count) : _chunkIterator.Current.Count;
+		get => count > 0 ? Math.Min(count, chunkIterator.Current.Count) : chunkIterator.Current.Count;
 	}
 
-	public readonly Archetype Archetype => _archetypeIterator.Current;
+	public readonly Archetype Archetype => archetypeIterator.Current;
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly int GetColumnIndexOf<T>() where T : struct => _indices.IndexOf(_archetypeIterator.Current.GetComponentIndex<T>());
+	public readonly int GetColumnIndexOf<T>() where T : struct => indices.IndexOf(archetypeIterator.Current.GetComponentIndex<T>());
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal readonly DataRow<T> GetColumn<T>(int index) 
@@ -192,94 +193,102 @@ public ref struct QueryIterator
 #else
 		var data = new DataRow<T>();
 #endif
-
-		if (index < 0 || index >= _indices.Length) {
+		if (index < 0 || index >= indices.Length) {
 			data.Value.Value = ref Unsafe.NullRef<T>();
+			data.Value.AddedTick = ref Unsafe.NullRef<Tick>();
+			data.Value.ChangedTick = ref Unsafe.NullRef<Tick>();
 			data.Size = 0;
 			return data;
 		}
 
-		var i = _indices[index];
+		var i = indices[index];
 		if (i < 0) {
 			data.Value.Value = ref Unsafe.NullRef<T>();
+			data.Value.AddedTick = ref Unsafe.NullRef<Tick>();
+			data.Value.ChangedTick = ref Unsafe.NullRef<Tick>();
 			data.Size = 0;
 			return data;
 		}
 
-		ref readonly var chunk = ref _chunkIterator.Current;
+		ref readonly var chunk = ref chunkIterator.Current;
 		ref var column = ref chunk.GetColumn(i);
 		ref var reference = ref MemoryMarshal.GetArrayDataReference(Unsafe.As<T[]>(column.Data));
-
+		ref var addedTicks = ref MemoryMarshal.GetArrayDataReference(column.AddedTicks);
+		ref var changedTicks = ref MemoryMarshal.GetArrayDataReference(column.ChangedTicks);
+		
 		data.Size = Unsafe.SizeOf<T>();
-		data.Value.Value = ref Unsafe.Add(ref reference, _startSafe);
-		data.Value.MutationData = new PtrMutationData();
+		data.Value.AddedTick = ref addedTicks;
+		data.Value.ChangedTick = ref changedTicks;
+		data.Value.Value = ref Unsafe.Add(ref reference, startSafe);
+		data.Value.AddedTick = ref Unsafe.Add(ref addedTicks, startSafe);
+		data.Value.ChangedTick = ref Unsafe.Add(ref changedTicks, startSafe);
 
 		return data;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal readonly Span<uint> GetChangedTicks(int index)
+	internal readonly Span<Tick> GetChangedTicks(int index)
 	{
-		if (index >= _indices.Length) {
-			return Span<uint>.Empty;
+		if (index >= indices.Length) {
+			return Span<Tick>.Empty;
 		}
 
-		var i = _indices[index];
+		var i = indices[index];
 		if (i < 0) {
-			return Span<uint>.Empty;
+			return Span<Tick>.Empty;
 		}
 
-		ref readonly var chunk = ref _chunkIterator.Current;
+		ref readonly var chunk = ref chunkIterator.Current;
 		ref var column = ref chunk.GetColumn(i);
 		ref var stateRef = ref MemoryMarshal.GetArrayDataReference(column.ChangedTicks);
 
 		var span = MemoryMarshal.CreateSpan(ref stateRef, column.ChangedTicks.Length);
 		if (!span.IsEmpty)
-			span = span.Slice(_startSafe, Count);
+			span = span.Slice(startSafe, Count);
 		return span;
 	}
-
+	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal readonly Span<uint> GetAddedTicks(int index)
+	internal readonly Span<Tick> GetAddedTicks(int index)
 	{
-		if (index >= _indices.Length) {
-			return Span<uint>.Empty;
+		if (index >= indices.Length) {
+			return Span<Tick>.Empty;
 		}
 
-		var i = _indices[index];
+		var i = indices[index];
 		if (i < 0) {
-			return Span<uint>.Empty;
+			return Span<Tick>.Empty;
 		}
 
-		ref readonly var chunk = ref _chunkIterator.Current;
+		ref readonly var chunk = ref chunkIterator.Current;
 		ref var column = ref chunk.GetColumn(i);
 		ref var stateRef = ref MemoryMarshal.GetArrayDataReference(column.AddedTicks);
 
 		var span = MemoryMarshal.CreateSpan(ref stateRef, column.AddedTicks.Length);
 		if (!span.IsEmpty)
-			span = span.Slice(_startSafe, Count);
+			span = span.Slice(startSafe, Count);
 		return span;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void MarkChanged(int index, int row)
 	{
-		if (index >= _indices.Length)
+		if (index >= indices.Length)
 			return;
-		var i = _indices[index];
+		var i = indices[index];
 
-		ref readonly var chunk = ref _chunkIterator.Current;
+		ref readonly var chunk = ref chunkIterator.Current;
 		ref var column = ref chunk.GetColumn(i);
-		column.MarkChanged(row, _tick);
+		column.MarkChanged(row, ThisRun);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly Span<T> Data<T>(int index) where T : struct
 	{
-		var span = _chunkIterator.Current.GetSpan<T>(_indices[index]);
+		var span = chunkIterator.Current.GetSpan<T>(indices[index]);
 
 		if (!span.IsEmpty)
-			span = span.Slice(_startSafe, Count);
+			span = span.Slice(startSafe, Count);
 
 		return span;
 	}
@@ -287,10 +296,10 @@ public ref struct QueryIterator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly ReadOnlySpan<ROEntityView> Entities()
 	{
-		var entities = _chunkIterator.Current.GetEntities();
+		var entities = chunkIterator.Current.GetEntities();
 
 		if (!entities.IsEmpty)
-			entities = entities.Slice(_startSafe, Count);
+			entities = entities.Slice(startSafe, Count);
 
 		return entities;
 	}
@@ -298,10 +307,10 @@ public ref struct QueryIterator
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly ReadOnlyMemory<ROEntityView> EntitiesAsMemory()
 	{
-		var entities = _chunkIterator.Current.Entities.AsMemory(0, _chunkIterator.Current.Count);
+		var entities = chunkIterator.Current.Entities.AsMemory(0, chunkIterator.Current.Count);
 
 		if (!entities.IsEmpty)
-			entities = entities.Slice(_startSafe, Count);
+			entities = entities.Slice(startSafe, Count);
 
 		return entities;
 	}
@@ -310,23 +319,23 @@ public ref struct QueryIterator
 	public bool Next()
 	{
 	REDO:
-		while (_chunkIterator.MoveNext()) {
-			if (_chunkIterator.Current.Count > 0)
+		while (chunkIterator.MoveNext()) {
+			if (chunkIterator.Current.Count > 0)
 				return true;
 		}
 
 	REDO_1:
-		if (!_archetypeIterator.MoveNext())
+		if (!archetypeIterator.MoveNext())
 			return false;
 
-		if (_archetypeIterator.Current.Count <= 0)
+		if (archetypeIterator.Current.Count <= 0)
 			goto REDO_1;
 
-		ref readonly var arch = ref _archetypeIterator.Current;
-		for (var i = 0; i < _indices.Length; ++i) {
-			_indices[i] = arch.GetComponentIndex(_terms[i].Id);
+		ref readonly var arch = ref archetypeIterator.Current;
+		for (var i = 0; i < indices.Length; ++i) {
+			indices[i] = arch.GetComponentIndex(terms[i].Id);
 		}
-		_chunkIterator = arch.Chunks[(_start >> Archetype.CHUNK_LOG2)..].GetEnumerator();
+		chunkIterator = arch.Chunks[(start >> Archetype.CHUNK_LOG2)..].GetEnumerator();
 
 		goto REDO;
 	}

@@ -7,7 +7,22 @@ namespace Verse.Render;
 /// Marker component that indicates that its entity needs to be synchronized to the render world.
 /// </summary>
 /// TODO docs on required components and ExtractComponentPlugin and SyncComponentPlugin
-public record struct SyncToRenderWorld { }
+public record struct SyncToRenderWorld : IHookedComponent<SyncToRenderWorld>
+{
+	public void OnAdd(EntityView view)
+	{
+		view.World.Resource<PendingSyncEntity>().Add(new EntityRecord(EntityRecord.OpType.Added, view.Id));
+	}
+	public void OnSet(EntityView view)
+	{
+	}
+	public void OnRemove(EntityView view)
+	{
+		if (view.Has<RenderEntity>()) {
+			view.World.Resource<PendingSyncEntity>().Add(new  EntityRecord(EntityRecord.OpType.Removed, view.Get<RenderEntity>().EntityId));
+		}
+	}
+}
 
 /// <summary>
 /// Tag component that indicats thats entity needs to be despawned at the end of the frame.
@@ -50,7 +65,11 @@ public record struct EntityRecord(EntityRecord.OpType Op, ulong EntityId)
 	}
 }
 
-public record struct PendingSyncEntity(Queue<EntityRecord> records) { }
+public class PendingSyncEntity
+{
+	public Queue<EntityRecord> Records = new Queue<EntityRecord>();
+	public void Add(EntityRecord record) => Records.Enqueue(record);
+}
 
 /// <summary>
 /// The simulation world of the application, stored as a resource.
@@ -65,7 +84,7 @@ public partial class EntitySyncSystems
 	public static void EntitySync(World mainWorld, World renderWorld)
 	{
 		var pendingRes = mainWorld.Resource<PendingSyncEntity>();
-		var records = pendingRes.records;
+		var records = pendingRes.Records;
 		EntityView mainEntity = new EntityView();
 
 		while (records.TryDequeue(out var record)) {

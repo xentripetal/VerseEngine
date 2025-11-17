@@ -34,8 +34,8 @@ public partial class RenderPlugin : IPlugin
 			InsertResource(app.World.Resource<AssetServer>()).
 			//.add_systems(ExtractSchedule, PipelineCache::extract_shaders)
 			AddSystems(RenderSchedules.Render, FuncSystem.Of<World, ResMut<ScheduleContainer>>(ApplyExtractCommands).InSet(RenderSets.ExtractCommands)).
-			AddSchedulable(new RenderGraphRunner()).
-			AddSchedulable(new EntitySyncSystems());
+			AddSchedulable<RenderGraphRunner>().
+			AddSchedulable<EntitySyncSystems>();
 
 		var runStartup = true;
 		renderApp.SetExtract((World mainWorld, World renderWorld) => {
@@ -49,6 +49,7 @@ public partial class RenderPlugin : IPlugin
 				runStartup = false;
 			}
 
+			EntitySyncSystems.EntitySync(mainWorld, renderWorld);
 			var uploader = renderWorld.Resource<ResourceUploader>();
 			renderWorld.InsertResource(new MainWorld(mainWorld));
 			renderWorld.RunSchedule(RenderSchedules.Extract);
@@ -62,6 +63,9 @@ public partial class RenderPlugin : IPlugin
 		renderApp.InsertResource(timeChannel.Writer);
 		app.InsertResource(timeChannel.Reader);
 		app.InsertSubApp(renderApp);
+
+		app.AddPlugin<CameraPlugin>().
+			AddPlugin<SyncWorldPlugin>();
 	}
 
 	public static void ApplyExtractCommands(World world, ResMut<ScheduleContainer> schedules)

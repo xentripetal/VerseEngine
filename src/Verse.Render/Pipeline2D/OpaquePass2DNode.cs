@@ -41,7 +41,7 @@ public class OpaquePass2DNode : IViewRenderNode<Empty>
 				new ColorTargetInfo(targetTexture, target.ClearColor ?? new Color(0, 0, 0, 0))
 			);
 			if (camera.Viewport.HasValue) {
-				renderPass.SetViewport(camera.Viewport.Value);
+				renderPass.SetViewport(camera.Viewport.Value.ToSDL());
 			}
 			if (!opaquePhase.IsEmpty) {
 				opaquePhase.Render(renderPass, world, viewEntity);

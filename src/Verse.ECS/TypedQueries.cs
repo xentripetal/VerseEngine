@@ -14,7 +14,7 @@ public interface IQueryIterator<TData>
 	[UnscopedRef]
 	ref TData Current { get; }
 	TData GetEnumerator();
-
+	
 	bool MoveNext();
 }
 
@@ -27,7 +27,6 @@ public interface IData<TData> : ITermCreator, IQueryIterator<TData>
 public interface IFilter<TFilter> : ITermCreator, IQueryIterator<TFilter>
 	where TFilter : struct, allows ref struct
 {
-	void SetTicks(Tick lastRun, Tick thisRun);
 	public static abstract TFilter CreateIterator(QueryIterator iterator);
 }
 

@@ -1,43 +1,13 @@
 ﻿namespace Verse.ECS;
 
-public class PtrMutationData
-{
-	public bool Mutated;
-}
-
 [SkipLocalsInit]
-public ref struct Ptr<T> 
+public ref struct Ptr<T> where T : struct
 {
-	internal ref T Value;
-	internal PtrMutationData? MutationData;
-
-	public unsafe bool Mutated {
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => MutationData is { Mutated: true };
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		set {
-			if (MutationData != null)
-				MutationData.Mutated = value;
-		}
-	}
-
-	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	public ref T Mut {
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get {
-			Mutated = true;
-			return ref Value;
-		}
-	}
-
-	public readonly ref readonly T Ref {
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => ref Value;
-	}
-
-	public readonly bool IsValid() => !Unsafe.IsNullRef(ref Value);
+	public ref T Value;
+	
+	public readonly ref readonly T Ref => ref Value;
+	public ref T Mut => ref Value;
 }
-
 [SkipLocalsInit]
 public readonly ref struct PtrRO<T> where T : struct
 {
@@ -50,15 +20,54 @@ public readonly ref struct PtrRO<T> where T : struct
 }
 
 [SkipLocalsInit]
-internal ref struct DataRow<T> 
+public ref struct Cell<T>
 {
-	public Ptr<T> Value;
+	internal ref T Value;
+	internal ref Tick AddedTick;
+	internal ref Tick ChangedTick;
+	internal Tick LastRun;
+	internal Tick ThisRun;
+
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	public ref T Mut {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get {
+			ChangedTick = ThisRun;
+			return ref Value;
+		}
+	}
+
+	public readonly ref readonly T Ref {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => ref Value;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public readonly bool IsValid() => !Unsafe.IsNullRef(ref Value);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public readonly bool IsChanged() => ChangedTick.IsNewerThan(LastRun, ThisRun);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public readonly bool IsAdded() => AddedTick.IsNewerThan(LastRun, ThisRun);
+}
+
+
+
+[SkipLocalsInit]
+internal ref struct DataRow<T>
+{
+	public Cell<T> Value;
 	public nint Size;
+
+	private static readonly int tickOffset = Unsafe.SizeOf<Tick>();
+
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Next()
 	{
 		Value.Value = ref Unsafe.AddByteOffset(ref Value.Value, Size);
-		Value.Mutated = false;
+		Value.AddedTick = ref Unsafe.AddByteOffset(ref Value.AddedTick, tickOffset);
+		Value.ChangedTick = ref Unsafe.AddByteOffset(ref Value.ChangedTick, tickOffset);
 	}
 }
