@@ -41,8 +41,8 @@ public readonly record struct RenderEdge(IRenderLabel OutputNode, IRenderLabel I
 public readonly struct RenderEdges(IRenderLabel label)
 {
 	public readonly IRenderLabel Label = label;
-	readonly OrderedSet<RenderEdge> _inputEdges = new OrderedSet<RenderEdge>();
-	readonly OrderedSet<RenderEdge> _outputEdges = new OrderedSet<RenderEdge>();
+	readonly IndexSet<RenderEdge> _inputEdges = new IndexSet<RenderEdge>();
+	readonly IndexSet<RenderEdge> _outputEdges = new IndexSet<RenderEdge>();
 
 	public IReadOnlyOrderedSet<RenderEdge> InputEdges => _inputEdges;
 	public IReadOnlyOrderedSet<RenderEdge> OutputEdges => _outputEdges;

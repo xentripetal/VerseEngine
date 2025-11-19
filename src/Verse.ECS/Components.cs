@@ -1,4 +1,5 @@
 using CommunityToolkit.HighPerformance.Helpers;
+using Verse.ECS.Datastructures;
 
 namespace Verse.ECS;
 
@@ -106,6 +107,8 @@ public class Component
 	public bool IsTag => Size == 0;
 	public bool IsValue => Type.IsCLR;
 	public bool IsDynamic => Type.IsEntityTag;
+	public RequiredComponents RequiredComponents = new RequiredComponents();
+	public IndexSet<ComponentId> RequiredBy = new IndexSet<ComponentId>();
 }
 
 public class RawComponentHooks
@@ -255,6 +258,22 @@ public class ComponentRegistry(World world)
 		return cmp;
 	}
 
+	public bool TryGetComponent<T>(out Component component)
+	{
+		if (indices.TryGetValue(typeof(T), out var id)) {
+			component = components[id];
+			return true;
+		}
+		component = null!;
+		return false;
+	}
+
+	public bool TryGetComponent(ComponentId id, out Component component)
+	{
+		component = components.TryGet(id, out var exists);
+		return exists;
+	}
+
 	public Component GetComponent<T>()
 	{
 		if (indices.TryGetValue(typeof(T), out var id)) {
@@ -293,16 +312,136 @@ public class ComponentRegistry(World world)
 		return null;
 	}
 
-	public bool RegisterRequiredComponent<T>(ComponentId requiree, ComponentId required, Func<T> ctor)
+	public RequiredComponents? GetRequiredComponents(ComponentId id)
 	{
-		throw new NotImplementedException();
+		return TryGetComponent(id, out var component) ? component.RequiredComponents : null;
+	}
+
+	public bool RegisterRequiredComponent<T>(ComponentId requiree, Func<T> ctor)
+	{
+		var required = GetComponent<T>();
+		if (required.RequiredComponents.All.ContainsKey(requiree)) {
+			throw new ArgumentException($"Cyclical dependency detected when registering required component {required} for {requiree}");
+		}
+
+		var requiredComponents = GetRequiredComponents(requiree);
+		if (requiredComponents == null)
+			return false;
+
+		if (requiredComponents.Direct.ContainsKey(requiree)) {
+			// can't require the same component twice
+			return false;
+		}
+
+		var requireeComponent = GetComponent(requiree);
+		var oldCount = requireeComponent.RequiredComponents.All.Count;
+		// Register the required component
+		requireeComponent.RequiredComponents.RegisterById(this, required.Id, ctor);
+
+		var newRequiredComponents = requireeComponent.RequiredComponents.All.Keys.Skip(oldCount).ToList();
+
+		// Get all the new requiree components, i.e. `requiree` and all the components that `requiree` is required by.
+		var newRequireeComponents = new IndexSet<ComponentId> { requiree };
+		newRequireeComponents.AddRange(requireeComponent.RequiredBy);
+
+		// Update the inherited required components of all requiree components (directly or indirectly).
+		// Skip the first one (requiree) because we already updated it.
+		for (int i = 1; i < newRequireeComponents.Count; i++) {
+			var indirectRequiree = newRequireeComponents[i];
+			RequiredComponentsScope(indirectRequiree, (requiredComponents) => {
+				requiredComponents.RebuildAll(this);
+			});
+		}
+
+		// Update the `required_by` of all the components that were newly required (directly or indirectly).
+		foreach (var indirectRequired in newRequiredComponents) {
+			var requiredBy = GetComponent(indirectRequired).RequiredBy;
+			// Remove and re-add all the components in `new_requiree_components`
+			// This preserves the invariant of `required_by` because `new_requiree_components`
+			// satisfies its invariant, due to being `requiree` followed by its `required_by` components,
+			// and because any component not in `new_requiree_components` cannot require a component in it,
+			// since if that was the case it would appear in the `required_by` for `requiree`.
+			foreach (var toRemove in newRequireeComponents) {
+				requiredBy.Remove(toRemove);
+			}
+			requiredBy.AddRange(newRequiredComponents);
+		}
+		return true;
+	}
+
+	private void RequiredComponentsScope(ComponentId componentId, Action<RequiredComponents> action)
+	{
+		if (!TryGetComponent(componentId, out var component)) {
+			throw new ArgumentException($"Component with id {componentId} not found");
+		}
+		var requiredComponents = component.RequiredComponents;
+		component.RequiredComponents = new RequiredComponents();
+		action(requiredComponents);
+		component.RequiredComponents = requiredComponents;
 	}
 }
 #pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
-public struct RequiredComponents
+/// <summary>
+/// The collection of metadata for components that are required for a given component
+/// </summary>
+public class RequiredComponents
 {
-	public OrderedDictionary<ComponentId, RequiredComponent> Direct;
+	/// <summary>
+	/// Components that are directly required (not inherited)
+	/// </summary>
+	public readonly OrderedDictionary<ComponentId, RequiredComponent> Direct = new OrderedDictionary<ComponentId, RequiredComponent>();
+	/// <summary>
+	/// Components that are required, including inherited ones.
+	/// </summary>
+	public readonly OrderedDictionary<ComponentId, RequiredComponent> All = new OrderedDictionary<ComponentId, RequiredComponent>();
+	public void RegisterById<T>(ComponentRegistry registry, ComponentId id, Func<T> ctor)
+	{
+		RegisterDynamic(registry, id, (array, index) => {
+			var arr = (T[])array;
+			arr[index & Archetype.CHUNK_THRESHOLD] = ctor();
+		});
+	}
+
+	public void RegisterDynamic(ComponentRegistry registry, ComponentId id, DynamicComponentCtor ctor)
+	{
+		// If already registered as a direct required component then bail.
+		if (Direct.ContainsKey(id)) {
+			throw new ArgumentException($"Component {id} is already directly required");
+		}
+
+		// Insert into `direct`.
+		var requiredComponent = new RequiredComponent {
+			Ctor = ctor
+		};
+		Direct.Add(id, requiredComponent);
+		var info = registry.GetComponent(id).RequiredComponents;
+		if (!All.ContainsKey(id)) {
+			foreach (var (inheritedId, inheritedRequired) in info.All) {
+				All.TryAdd(inheritedId, inheritedRequired);
+			}
+			All.TryAdd(id, requiredComponent);
+		}
+	}
+
+	public void RebuildAll(ComponentRegistry registry)
+	{
+		All.Clear();
+		foreach (var (required, component) in Direct) {
+			var info = registry.GetComponent(required).RequiredComponents;
+			if (All.ContainsKey(required)) continue;
+			foreach (var (inheritedId, inheritedRequired) in info.All) {
+				All.TryAdd(inheritedId, inheritedRequired);
+			}
+			All.TryAdd(required, component);
+		}
+	}
 }
 
-public struct RequiredComponent { }
+public delegate void DynamicComponentCtor(Array array, int index);
+
+public struct RequiredComponent
+{
+	// TODO support for sparse set 
+	public DynamicComponentCtor Ctor;
+}

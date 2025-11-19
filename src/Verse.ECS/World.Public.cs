@@ -498,7 +498,7 @@ public sealed partial class World
 		var requiree = Registry.RegisterComponent<TComponent>();
 		// todo check if we already have an archetype with this component and panic if present
 		var required = Registry.RegisterComponent<TRequired>();
-		throw new NotImplementedException();
+		return Registry.RegisterRequiredComponent(requiree, ctor);
 	} 
 
 
